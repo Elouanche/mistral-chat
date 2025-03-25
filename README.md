@@ -1,9 +1,4 @@
 # mistral-chat
-Voici un README amélioré, structuré et bien détaillé avec la liste des fonctionnalités clairement présentée :
-
----
-
-# Mon Projet d'Application Mistral
 
 ## Description
 
