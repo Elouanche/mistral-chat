@@ -1,0 +1,24 @@
+{
+  "name": "mistral-chat",
+  "version": "1.0.0",
+  "description": "L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher les réponses de manière fluide et interactive. Elle propose également une gamme de fonctionnalités supplémentaires pour gérer l'utilisateur, la personnalisation, les abonnements et l'interaction avec l'API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Elouanche/mistral-chat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Elouanche/mistral-chat/issues"
+  },
+  "homepage": "https://github.com/Elouanche/mistral-chat#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.1.4"
+  }
+}
