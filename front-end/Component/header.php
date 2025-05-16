@@ -4,7 +4,7 @@
         <nav aria-label="Navigation principale">
             <div role="banner">
                 <a href="/" id="partiel" aria-label="Accueil Lorempsum">
-                    <h1>Lorempsum</h1>
+                    <h1>Mistral-GPT</h1>
                     <div class="logo">
                         <img src="<?php echo STATIC_URL; ?>asset/logo.svg" alt="Logo de Lorempsum">
                     </div>
