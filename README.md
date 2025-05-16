@@ -47,7 +47,7 @@ L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher l
 ### 📱Wireframe :
 
 - **Page principale** : Il s’agit de la page où l’on peut interagir avec l’IA, accéder à son profil, consulter les discussions, etc.
-![alt text](img/MistralGPT-Home.png)
+<img src="img/MistralGPT-Home.png" alt="Page principale" width="400">
 
 - **Page avec l’onglet des discussions** : Cette page correspond à l’accueil avec l’onglet affichant toutes les conversations. 
 ![alt text](<img/MistralGPT - Home avec chat.png>)
