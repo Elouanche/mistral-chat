@@ -1,6 +1,6 @@
 -- Vérifier si la base de données existe, si non, la créer
-CREATE DATABASE IF NOT EXISTS sc1feir2687_lorempsum;
-USE sc1feir2687_lorempsum;
+CREATE DATABASE IF NOT EXISTS sc1feir2687_mistral_chat;
+USE sc1feir2687_mistral_chat;
 
 -- Table pour les utilisateurs
 DROP TABLE IF EXISTS users;
@@ -228,3 +228,127 @@ CREATE TABLE IF NOT EXISTS products_image (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Table pour les modèles ai disponibles
+CREATE TABLE IF NOT EXISTS ai_models (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    model_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    parameters JSON,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+
+-- Table pour stocker les clés API des utilisateurs
+CREATE TABLE IF NOT EXISTS api_keys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    api_key VARCHAR(255) NOT NULL,
+    provider VARCHAR(50) DEFAULT 'ai',
+    is_active BOOLEAN DEFAULT TRUE,
+    last_used TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Table pour les conversations avec ai
+CREATE TABLE IF NOT EXISTS ai_conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(191) DEFAULT 'Nouvelle conversation',
+    description TEXT,
+    model_id INT NOT NULL,
+    system_prompt TEXT,
+    is_archived BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_id) REFERENCES ai_models(id) ON DELETE RESTRICT
+) ENGINE = InnoDB;
+
+-- Table pour les messages dans les conversations
+CREATE TABLE IF NOT EXISTS ai_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    role ENUM('user', 'assistant', 'system') NOT NULL,
+    content TEXT NOT NULL,
+    tokens_used INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Table pour les requêtes API envoyées à ai
+CREATE TABLE IF NOT EXISTS ai_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    conversation_id INT,
+    model_id INT NOT NULL,
+    prompt TEXT NOT NULL,
+    parameters JSON,
+    request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    response_timestamp TIMESTAMP NULL,
+    status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+    error_message TEXT,
+    tokens_prompt INT DEFAULT 0,
+    tokens_completion INT DEFAULT 0,
+    latency_ms INT,
+    request_id VARCHAR(100),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE SET NULL,
+    FOREIGN KEY (model_id) REFERENCES ai_models(id) ON DELETE RESTRICT
+) ENGINE = InnoDB;
+
+-- Table pour les réponses reçues de l'API ai
+CREATE TABLE IF NOT EXISTS ai_responses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    response_text TEXT NOT NULL,
+    finish_reason VARCHAR(50),
+    raw_response JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES ai_requests(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Table pour la facturation et l'utilisation
+CREATE TABLE IF NOT EXISTS api_usage (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    model_id INT NOT NULL,
+    request_id INT NOT NULL,
+    input_tokens INT NOT NULL DEFAULT 0,
+    output_tokens INT NOT NULL DEFAULT 0,
+    estimated_cost DECIMAL(10, 6) NOT NULL DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'USD',
+    usage_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_id) REFERENCES ai_models(id) ON DELETE RESTRICT,
+    FOREIGN KEY (request_id) REFERENCES ai_requests(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Table pour les quotas d'utilisation
+CREATE TABLE IF NOT EXISTS api_quotas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    max_tokens_per_day INT DEFAULT 10000,
+    max_requests_per_minute INT DEFAULT 10,
+    max_monthly_cost DECIMAL(10, 2) DEFAULT 10.00,
+    is_unlimited BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+-- Table pour les logs des requêtes API (remplace les webhooks pour un usage local)
+CREATE TABLE IF NOT EXISTS api_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    request_id INT,
+    event_type VARCHAR(50) NOT NULL,
+    details JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (request_id) REFERENCES ai_requests(id) ON DELETE SET NULL
+) ENGINE = InnoDB;
