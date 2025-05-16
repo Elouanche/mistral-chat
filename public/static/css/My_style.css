@@ -1,35 +1,33 @@
 :root {
-    /* Système de couleurs */
     /* Couleurs de base */
-    --color-1: #feec4d;
-    --color-black: #000000;
-    --color-white: #ffffff;
-    --color-gray-100: #e9e9e9;
-    --color-gray-200: #a3a3a3;
-    --color-gray-300: #878788;
-    --color-gray-800: #1E1F1C;
-    --color-gray-900: #161616;
-    --color-accent: #e60000;
+    --color-1: #66b5ff; /* Ancien jaune vif remplacé par un bleu accent plus doux */
+    --color-black: #0d0d0d; /* Noir très foncé (scrim/inverted) */
+    --color-white: #ffffff; /* Blanc (inchangé) */
+    --color-gray-100: #f3f3f3; /* Ancien gris clair */
+    --color-gray-200: #cdcdcd; /* Gris moyen */
+    --color-gray-300: #afafaf; /* Gris plus sombre */
+    --color-gray-800: #303030; /* Background secondaire */
+    --color-gray-900: #212121; /* Background principal */
+    --color-accent: #e02e2a; /* Ancien rouge vif → danger primaire */
 
     /* Couleurs sémantiques */
-    --color-text: var(--color-white);
-    --color-text-secondary: var(--color-gray-100);
-    --color-text-muted: var(--color-gray-200);
-    --color-background: var(--color-gray-800);
-    --color-background-alt: var(--color-gray-900);
-    --color-border: var(--color-gray-200);
-    --color-highlight: var(--color-1);
+    --color-text: var(--text-primary); /* Blanc */
+    --color-text-secondary: var(--text-secondary); /* f3f3f3 */
+    --color-text-muted: var(--text-tertiary); /* afafaf */
+    --color-background: var(--bg-secondary); /* 303030 */
+    --color-background-alt: var(--bg-primary); /* 212121 */
+    --color-border: var(--border-default); /* blanc avec opacité */
+    --color-highlight: var(--text-accent); /* 66b5ff */
 
-    
     /* Dimensions et espacements */
     --footer-padding: 20px 0;
     --footer-text-size: 16px;
     --footer-copy-size: 14px;
 
-    /* Couleurs utile */
-    --color-success: #17b93d;
-    --color-warning: #ffde07;
-    --color-danger: #ff0019;
+    /* Couleurs utiles */
+    --color-success: #17b93d; /* Non spécifié dans ton nouveau jeu, gardé tel quel */
+    --color-warning: var(--text-status-warning); /* ff9e6c */
+    --color-danger: var(--interactive-bg-danger-primary-default); /* e02e2a */
     
     /* Typography */
     --font-primary: 'Poppins', system-ui, -apple-system, sans-serif;

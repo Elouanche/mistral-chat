@@ -1,0 +1,11 @@
+RewriteEngine On
+# Force www and HTTP to https://lorempsum.fr
+RewriteCond %{HTTP_HOST} !^lorempsum\.fr$ [NC,OR]
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://lorempsum.fr%{REQUEST_URI} [L,R=301]
+
+
+RewriteEngine On
+RewriteBase /
+RewriteRule ^$ public/ [L]
+RewriteRule (.*) public/$1 [L]
