@@ -42,6 +42,8 @@ L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher l
 
 - **Support client** : Accès à un support client pour toute demande ou problème rencontré par l'utilisateur.
 
+## Maquette
+
 ### 📱Wireframe :
 
 - **Page principale** : Il s’agit de la page où l’on peut interagir avec l’IA, accéder à son profil, consulter les discussions, etc.
@@ -52,6 +54,8 @@ L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher l
 
 - **Page de connexion/inscription** : Cette page permet de se connecter, de s’inscrire, mais aussi de se déconnecter une fois connecté.
 ![alt text](<img/MistralGPT - Login Register.png>)
+
+## Les technologies du projet 
 
 ### 💻​ Choix des technos :
 
