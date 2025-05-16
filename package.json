@@ -20,5 +20,8 @@
   "homepage": "https://github.com/Elouanche/mistral-chat#readme",
   "devDependencies": {
     "tailwindcss": "^4.1.4"
+  },
+  "dependencies": {
+    "mistral-chat": "file:"
   }
 }

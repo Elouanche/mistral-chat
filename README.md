@@ -41,3 +41,22 @@ L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher l
 ### 🎯 Support et assistance :
 
 - **Support client** : Accès à un support client pour toute demande ou problème rencontré par l'utilisateur.
+
+### 📱Wireframe :
+
+- **Page principale** : Il s’agit de la page où l’on peut interagir avec l’IA, accéder à son profil, consulter les discussions, etc.
+![alt text](img/MistralGPT-Home.png)
+
+- **Page avec l’onglet des discussions** : Cette page correspond à l’accueil avec l’onglet affichant toutes les conversations. 
+![alt text](<img/MistralGPT - Home avec chat.png>)
+
+- **Page de connexion/inscription** : Cette page permet de se connecter, de s’inscrire, mais aussi de se déconnecter une fois connecté.
+![alt text](<img/MistralGPT - Login Register.png>)
+
+### 💻​ Choix des technos :
+
+- **PHP 8.4** : Nous avons choisi PHP pour notre back-end. Nous avons l’habitude d’utiliser cette technologie avec Laravel ou Symfony, mais nous voulions reprendre certaines bases avec un projet développé from scratch.
+
+- **Tailwind CSS v4.0** : Nous avons décidé d’utiliser Tailwind CSS pour sa modernité et sa large communauté. De plus, ChatGPT a été développé avec Tailwind CSS.
+
+- **MySQL avec PHPmyAdmin** : Nous avons décidé d’utiliser MySQL comme système de gestion de base de données, en l’accompagnant de phpMyAdmin pour sa simplicité d’utilisation.
