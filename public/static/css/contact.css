@@ -1,0 +1,45 @@
+/* Styles pour la page contact */
+.contact-page {
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.contact-form {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.contact-form form {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+.contact-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.contact-form input,
+.contact-form textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+.contact-form textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+.contact-form button {
+    margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .contact-form form {
+        flex-direction: column;
+    }
+}

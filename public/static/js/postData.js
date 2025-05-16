@@ -1,18 +1,20 @@
+if (typeof baseUrl === 'undefined') {
+    var baseUrl = `${window.location.protocol}//${window.location.host}`;
+}
 
-const baseUrl = `${window.location.protocol}//${window.location.host}`;
-const apiUrl = `${baseUrl}/api/api_gateway.php`;
+if (typeof apiUrl === 'undefined') {
+    var apiUrl = `${baseUrl}/api/api_gateway.php`;
+}
 /**
  * Helper function to send POST requests.
- * @param {string} url - The endpoint URL.
  * @param {Object} data - The data to send in the request body.
  * @returns {Promise<Object>} - The JSON response.
  */
-async function postData(url, data) {
+async function postData(data) {
     try {
-        console.log('Sending request to:', url);
         console.log('Request data:', data);
         
-        const response = await fetch(url, {
+        const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -20,11 +22,20 @@ async function postData(url, data) {
             body: JSON.stringify(data),
         });
         
-        console.log('Response status:', response.status);
-        
+
+        const contentType = response.headers.get("Content-Type");
+
+        if (contentType && contentType.includes("application/pdf")) {
+            const blob = await response.blob();
+            const fileUrl = window.URL.createObjectURL(blob);
+
+            window.open(fileUrl, '_blank');
+
+            return { status: "success", message: "PDF opened and download triggered." };
+        }
         const text = await response.text();
         let jsonResponse;
-        
+
         try {
             jsonResponse = JSON.parse(text);
             console.log('API Response:', jsonResponse);
@@ -32,41 +43,44 @@ async function postData(url, data) {
             console.error('Invalid JSON response:', text);
             throw new Error('Invalid JSON response from server');
         }
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}, message: ${jsonResponse.message || 'Unknown error'}`);
         }
-        if (jsonResponse.status === 'success') {
-            // Gérer la redirection en fonction de la réponse, mais seulement pour certaines actions
-            // Vérifier si la requête concerne le panier (Cart)
-            const isCartOperation = data && (data.service === 'Cart');
-            const noRedirectServices = [
-                'Order', 'Returned', 'Review',
-                'AdminOrder', 'AdminProduct', 'AdminReturned', 'AdminUser',
-                'Payment', 'Notification', 'Delivery', 'Import', 'Analytics',
-                'ErrorHandling', 'Monitoring'
-            ];
-            const service = data?.service;
+
+        if (jsonResponse.status === 'success' || jsonResponse.status === 'pending') {
+            console.log('Success response:', jsonResponse);
             
-            if (jsonResponse.data && jsonResponse.data.redirect && !isCartOperation) {
-                window.location.href = jsonResponse.data.redirect;
-            } else if (jsonResponse.data && !isCartOperation && !noRedirectServices.includes(service) ) {
-                // Redirection par défaut si aucune redirection n'est spécifiée
-                window.location.href = '/';
+            // Gestion de la redirection
+            const redirectUrl = jsonResponse.redirect || jsonResponse.data?.redirect;
+            if (redirectUrl) {
+                console.log('Redirecting to:',  redirectUrl);
+                window.location.href =  redirectUrl;
+                return;
             }
-            // Ne pas rediriger par défaut pour les opérations du panier
+
+            // Gestion des PDFs
+            if (jsonResponse.pdf_url) {
+                const fullPdfUrl = `${baseUrl}${jsonResponse.pdf_url}`;
+                window.open(fullPdfUrl, '_blank');
+                const link = document.createElement('a');
+                link.href = fullPdfUrl;
+                link.download = fullPdfUrl.split('/').pop();
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         }
+
         if (jsonResponse.error) {
             if (jsonResponse.isAdmin) {
-                // Afficher l'erreur dans l'interface admin
                 console.error(jsonResponse.error);
                 throw new Error(jsonResponse.error);
             } else {
-                // Rediriger vers la page d'erreur pour les utilisateurs normaux
                 window.location.href = `/error?code=${encodeURIComponent(jsonResponse.code)}&message=${encodeURIComponent(jsonResponse.error)}`;
             }
         }
-        
+
         return jsonResponse;
     } catch (error) {
         console.error("Error:", error);

@@ -1,0 +1,57 @@
+/* Styles pour les modales du dashboard admin */
+
+.modal-header {
+    background-color: var(--color-highlight);
+    color: var(--color-black);
+    border-bottom: 1px solid var(--color-gray-300);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--color-gray-300);
+    background-color: var(--color-gray-100);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-content {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Styles pour les badges dans la modale */
+.modal-body .badge {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+}
+
+/* Styles pour les tableaux dans la modale */
+.modal-body .table {
+    margin-bottom: 0;
+}
+
+.modal-body .table th {
+    background-color: var(--table-header-bg);
+    color: var(--color-highlight);
+}
+
+/* Styles pour les boutons d'action dans la modale */
+.modal-footer .btn-success,
+.modal-footer .btn-info {
+    min-width: 140px;
+}
+
+/* Responsive design pour les modales */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+}

@@ -1,0 +1,132 @@
+:root {
+    --table-header-bg: var(--color-gray-900);
+    --table-row-hover: var(--color-gray-800);
+    --table-border: var(--color-gray-300);
+}
+
+.admin-orders {
+    padding: var(--spacing-lg);
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    color: var(--color-text);
+}
+
+.orders-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-lg);
+    align-items: center;
+}
+
+.filter-container, .search-container {
+    width: 300px;
+}
+
+.filter-select, .search-input {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background-color: var(--color-background-alt);
+    border: 1px solid var(--table-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+}
+
+.orders-table-container {
+    overflow-x: auto;
+    background-color: var(--color-background);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--spacing-md);
+}
+
+.orders-table th, .orders-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--table-border);
+}
+
+.orders-table th {
+    background-color: var(--table-header-bg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-highlight);
+}
+
+.orders-table tr:hover {
+    background-color: var(--table-row-hover);
+}
+
+.status-select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-background-alt);
+    border: 1px solid var(--table-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+}
+
+.view-details-btn, .save-status-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    margin-right: var(--spacing-xs);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.view-details-btn {
+    background-color: var(--color-highlight);
+    color: var(--color-black);
+}
+
+.save-status-btn {
+    background-color: var(--color-success);
+    color: var(--color-white);
+}
+
+.view-details-btn:hover {
+    background-color: var(--color-accent);
+    color: var(--color-white);
+}
+
+/* Responsive Design */
+@media (max-width: var(--breakpoint-md)) {
+    .orders-controls {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .filter-container, .search-container {
+        width: 100%;
+    }
+
+    .orders-table th, .orders-table td {
+        padding: var(--spacing-sm);
+    }
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.bulk-actions button, .bulk-actions select {
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.bulk-actions select {
+    min-width: 200px;
+}
+
+
+#selectAll {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}

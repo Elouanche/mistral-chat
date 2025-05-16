@@ -1,0 +1,48 @@
+/* Styles pour la page d'accueil */
+
+/* Section carousel */
+section[aria-labelledby="section-carousel"] {
+    width: 100%;
+    display: none;
+}
+
+/* Style pour l'image de qualité */
+.feature-content img {
+    z-index: var(--z-optionel-2);
+}
+
+/* Style pour l'image d'embout aimanté droit */
+.embout-aimenter img:last-child {
+    transform: scaleX(-1);
+}
+
+/* Styles pour la notification */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: var(--z-tooltip);
+    display: none;
+}
+
+.notification-container.show {
+    display: block;
+}
+
+/* Styles extraits de home.php */
+#notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: var(--z-tooltip);
+    display: none;
+}
+
+#notification-container.show {
+    display: block;
+}
+
+/* Style pour les images dans les sections */
+.feature-block .feature-content img {
+    z-index: var(--z-optionel-2);
+}

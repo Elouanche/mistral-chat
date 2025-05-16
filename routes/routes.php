@@ -8,9 +8,14 @@ return [
     '/cart' => 'cart',
     '/checkout' => 'checkout',
     '/order-success' => 'success',
+    '/email-success' => 'success',
+    '/contact-success' => 'success',
+    '/subscription-success' => 'success',
+    '/payment-success' => 'success',
+    '/success' => 'success',
+    '/cancel' => 'cancel',
     '/returns' => 'returns',
     
-
     // Administration
     '/admin/dashboard' => 'admin/dashboard',
     '/admin/orders' => 'admin/orders',
@@ -44,7 +49,7 @@ return [
     '/privacy' => 'legal/privacy',
     '/terms' => 'legal/terms',
     '/cgv' => 'legal/cgv',
+    
 ];
-
 
 ?>

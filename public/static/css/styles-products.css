@@ -1,0 +1,129 @@
+/* Styles pour la section produits */
+.products-section {
+    width: 100%;
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Styles des contrôles de pagination */
+.pagination-controls {
+    margin-bottom: var(--spacing-md);
+}
+
+.pagination-button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--color-gray-200);
+    cursor: pointer;
+    transition: background-color var(--duration-fast);
+}
+
+.pagination-button:hover:not([disabled]) {
+    background-color: var(--color-gray-200);
+}
+
+.pagination-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-button.active {
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    border-color: var(--color-accent);
+}
+
+/* Conteneur de produits - ajusté pour que les cartes fassent 50% */
+.products-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 colonnes au lieu de 4 */
+    gap: var(--spacing-md);
+}
+
+/* Styles des cartes produits */
+.product-card {
+    width: 100%; /* Les cartes prennent 100% de leur container, qui est maintenant 50% de la section */
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: transform var(--duration-fast), box-shadow var(--duration-fast);
+    background-color: var(--color-gray-200);
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-sm);
+}
+
+.product-image {
+    height: 200px;
+    overflow: hidden;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--duration-fast);
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.05);
+}
+
+.product-details {
+    padding: var(--spacing-md);
+}
+
+.product-name {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-xs);
+}
+
+.product-price {   
+    color: var(--color-black);
+    margin-bottom: var(--spacing-xs);
+}
+
+.product-availability {
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+}
+
+.in-stock {
+    color: var(--color-success); /* Variable pour le vert */
+}
+
+.low-stock {
+    color: var(--color-warning); /* Variable pour l'orange */
+}
+
+.out-of-stock {
+    color: var(--color-danger); /* Variable pour le rouge */
+}
+
+.add-to-cart {
+    width: 100%;
+}
+
+/* Responsive design pour les conteneurs de produits */
+@media (max-width: var(--breakpoint-md)) {
+    .pagination-bottom {
+        flex-wrap: wrap;
+    }
+    
+    .product-image {
+        height: 150px;
+    }
+    
+    /* Passer à une seule colonne sur mobile */
+    .products-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Pour les grands écrans, garder le 50% */
+@media (min-width: var(--breakpoint-lg)) {
+    .products-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

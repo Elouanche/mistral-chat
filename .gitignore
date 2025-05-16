@@ -1,0 +1,90 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+/vendor
+composer.lock
+
+# Testing
+/coverage
+
+# Production
+/build
+/dist
+/out
+
+# Environment variables et fichiers de configuration
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.config.js
+config.json
+
+# Clés de sécurité et certificats
+*.pem
+*.key
+*.cert
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Exclure toutes les images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.webp
+*.bmp
+*.tiff
+*.ico
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE et éditeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Cache et fichiers temporaires
+.cache/
+.temp/
+.tmp/
+*.tmp
+*.temp
+
+# Autres
+.DS_Store
+*.bak
+*.backup
+.history 
+
+
+# FIchier inutile
+/vendor
+vendor/
+
+# Exclure des fichiers sensibles
+*.key
+*.api
+*.secret
+
+# Exclure tout le dossier "autre" et son contenu
+autre/
+/autre
+# Exclure les fichiers de configuration de l'environnement
+
+.ENV
+.env

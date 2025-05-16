@@ -2,7 +2,7 @@
 <?php
 require_once SHARED_PATH . "session.php";
 require_once SHARED_PATH . 'erreur.php';
-
+require_once SHARED_PATH . 'apiRequest.php';
 
 $isAdmin = isset($_SESSION['admin']) && $_SESSION['admin'] == 'admin';
 // Séparer les requêtes API des requêtes de pages
@@ -34,19 +34,37 @@ try {
 } catch (Exception $e) {
     sendErrorResponse('UNSUPPORTED_CONTENT_TYPE', $isAdmin);
 }
-if (isset($userId) && !empty($userId) && $isAdmin == false) {
 
-    if (!isset($_SESSION['cart'][$userId])) {
-        $_SESSION['cart'][$userId] = [];
+// Initialisation du panier - utiliser la même clé que dans CartService
+$sessionKey = 'user_cart';
+if (!isset($_SESSION[$sessionKey])) {
+    $_SESSION[$sessionKey] = [
+        'items' => [],
+        'total_amount' => 0,
+        'item_count' => 0
+    ];
+}
+
+// Récupérer l'ID utilisateur s'il est connecté
+$userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+
+// Si on a une action POST d'ajout au panier, utiliser l'API
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+    $productId = $_POST['product_id'];
+    $quantity = $_POST['quantity'] ?? 1;
+    
+    // Préparation des données pour l'API
+    $data = [
+        'product_id' => $productId,
+        'quantity' => $quantity
+    ];
+    
+    // Ajouter l'ID utilisateur si connecté
+    if ($userId) {
+        $data['user_id'] = $userId;
     }
-    $cart = $_SESSION['cart'][$userId];
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
-        $productId = $_POST['product_id'];
-        $quantity = $_POST['quantity'] ?? 1;
-
-        $cart[] = ['product_id' => $productId, 'quantity' => $quantity];
-        $_SESSION['cart'][$userId] = $cart;
-    }
+    
+    // Appel à l'API Cart pour ajouter au panier
+    makeApiRequest('Cart', 'addItem', $data);
 }
 ?>

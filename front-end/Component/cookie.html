@@ -1,0 +1,43 @@
+<!-- Cookie Consent Banner -->
+<div id="cookie-consent" class="cookie-banner" aria-describedby="cookie-description">
+    <p id="cookie-description">Ce site utilise des cookies pour améliorer votre expérience. <a href="<?php echo url_for('/privacy-policy.php'); ?>" class="text-link">En savoir plus</a></p>
+    <div class="cookie-controls">
+        <button id="accept-cookies" class="button-secondary">Accepter</button>
+        <button id="reject-cookies" class="button-outline">Refuser</button>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    // Simple CSRF validation example
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cookie consent management
+        const cookieBanner = document.getElementById('cookie-consent');
+        const acceptBtn = document.getElementById('accept-cookies');
+        const rejectBtn = document.getElementById('reject-cookies');
+        
+        // Check if user has already made a choice
+        if (!localStorage.getItem('cookieConsent')) {
+            cookieBanner.style.display = 'flex';
+        }
+        
+        acceptBtn.addEventListener('click', function() {
+            localStorage.setItem('cookieConsent', 'accepted');
+            cookieBanner.style.display = 'none';
+        });
+        
+        rejectBtn.addEventListener('click', function() {
+            localStorage.setItem('cookieConsent', 'rejected');
+            cookieBanner.style.display = 'none';
+        });
+        
+        // More reviews functionality
+        const moreReviewsBtn = document.querySelector('.more-reviews-btn');
+        if (moreReviewsBtn) {
+            moreReviewsBtn.addEventListener('click', function() {
+                // Functionality to show more reviews would go here
+                alert('Fonctionnalité à implémenter: afficher plus d\'avis clients');
+            });
+        }
+    });
+</script>
