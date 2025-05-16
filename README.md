@@ -50,10 +50,10 @@ L'application permet d'envoyer des requêtes à l'API de Mistral et d'afficher l
 <img src="img/MistralGPT-Home.png" alt="Page principale" width="400">
 
 - **Page avec l’onglet des discussions** : Cette page correspond à l’accueil avec l’onglet affichant toutes les conversations. 
-![alt text](<img/MistralGPT - Home avec chat.png>)
+<img src="img/MistralGPT - Home avec chat.png" alt="Page principale" width="400">
 
 - **Page de connexion/inscription** : Cette page permet de se connecter, de s’inscrire, mais aussi de se déconnecter une fois connecté.
-![alt text](<img/MistralGPT - Login Register.png>)
+<img src="img/MistralGPT - Login Register.png" alt="Page principale" width="400">
 
 ## Les technologies du projet 
 
