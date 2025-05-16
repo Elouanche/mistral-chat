@@ -35,7 +35,6 @@ config.json
 # Exclure toutes les images
 *.jpg
 *.jpeg
-*.png
 *.gif
 *.svg
 *.webp
