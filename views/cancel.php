@@ -1,9 +1,5 @@
 <?php 
-ini_set('display_errors', 1); 
-error_reporting(E_ALL);  
-require_once SHARED_PATH . "session.php"; 
-require_once COMPONENT_PATH . "head.php";
-require_once SHARED_PATH . 'apiRequest.php';
+
 
 // Récupérer l'ID de commande
 $orderId = $_GET['order_id'] ?? null;
@@ -62,6 +58,15 @@ if ($orderId) {
     exit;
 }
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Cancel</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main class="cancel-page">
     <h1>Paiement annulé</h1>

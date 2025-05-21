@@ -1,21 +1,6 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
-// Vérification de l'authentification admin
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== 'admin') {
-    header('Location: /user/login');
-    exit;
-}
-
-
-if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
-    require_once SHARED_PATH .'adminMiddleware.php';
-    checkAdminAccess();
-}
-
-require_once SHARED_PATH . "session.php";
-require_once COMPONENT_PATH . "head.php";
+require_once SHARED_PATH . 'admin.php';
 
 require_once SHARED_PATH . "apiRequest.php";
 
@@ -40,7 +25,16 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     }
 }
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
 
+    <title>Mistral Chat - Dashbord</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 <main class="admin-support">
     <h1>Gestion du Support Client</h1>
     

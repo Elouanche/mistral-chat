@@ -1,5 +1,5 @@
-<?php require_once "../DIR.php"   ?>
-<?php
+<?php 
+require_once "../DIR.php";
 require_once SHARED_PATH . "session.php";
 require_once SHARED_PATH . 'erreur.php';
 require_once SHARED_PATH . 'apiRequest.php';

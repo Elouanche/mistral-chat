@@ -1,4 +1,3 @@
-<?php require_once SHARED_PATH . "session.php"; ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>

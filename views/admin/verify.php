@@ -6,17 +6,18 @@ if (!isset($_SESSION['admin']  ) || $_SESSION['admin'] !== 'pending') {
     exit;
     
 }
-// Au début de chaque page admin :
-/*
-if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
-    require_once COMPONENT_PATH . "adminMiddleware.php";
-    checkAdminAccess();
-}
-    */
+
 ?>
-<?php require_once SHARED_PATH . "session.php";?>
-<?php require_once COMPONENT_PATH . "head.php";?>
-    <div class="admin-verify-container">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Admin Verify</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
+    <main class="admin-verify-container">
         <h2>Vérification Administrateur</h2>
         <p>Un code de vérification a été envoyé à votre adresse email.</p>
         
@@ -38,7 +39,7 @@ if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
         </form>
         
         <div id="errorMessage" class="error-message" style="display: none;"></div>
-    </div>
+    </main>
 
 <script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-verify.js" defer></script>
 <?php require_once COMPONENT_PATH . "foot.php"; ?>

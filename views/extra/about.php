@@ -1,10 +1,14 @@
-<?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
-require_once SHARED_PATH . "session.php";
-require_once COMPONENT_PATH . "head.php";
-?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - About</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main class="about-page"  role="main">
     <h1>À propos de nous</h1>

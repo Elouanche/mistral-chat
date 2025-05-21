@@ -1,6 +1,4 @@
 <?php
-// views/user/account.php
-require_once COMPONENT_PATH . 'head.php';
 
 // Sécurité : rediriger si l'utilisateur n'est pas connecté
 if (!isset($_SESSION['user_id'])) {
@@ -13,6 +11,13 @@ $userId = (int) $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION['user_username'], ENT_QUOTES, 'UTF-8');
 $email = htmlspecialchars($_SESSION['user_email'], ENT_QUOTES, 'UTF-8');
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Account</title>
+</head>
+
 
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/modal.css">
 

@@ -1,12 +1,5 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
-// Inclusions
-require_once CONFIG_PATH . "log_config.php";
-require_once SHARED_PATH . 'session.php';
-require_once COMPONENT_PATH . 'head.php';
-require_once SHARED_PATH . 'apiRequest.php';
 
 // Vérifier la connexion utilisateur
 $isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
@@ -36,6 +29,15 @@ if (is_array($cartResult) && isset($cartResult['status']) && $cartResult['status
 }
 
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Cart</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/page-cart.css">
 

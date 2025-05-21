@@ -1,10 +1,12 @@
-<?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Contact</title>
+</head>
 
-require_once SHARED_PATH . "session.php";
-require_once COMPONENT_PATH . "head.php";
-?>
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 <main class="contact-page"  role="main" style="min-height: 100vh; padding: 2rem;">
     <section class="contact-form" style="max-width: 1000px; margin: auto;">
         <h2>Formulaire de contact</h2>

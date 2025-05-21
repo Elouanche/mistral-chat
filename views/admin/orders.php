@@ -1,24 +1,6 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 // Session sécurisée
-require_once SHARED_PATH . 'session.php';
-
-// Vérification d'accès admin
-if (empty($_SESSION['admin']) || $_SESSION['admin'] !== 'admin') {
-    header('Location: /user/login');
-    exit;
-}
-
-// Middleware admin pour sécuriser les sous-pages admin
-if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
-    require_once SHARED_PATH . 'adminMiddleware.php';
-    checkAdminAccess();
-}
-
-require_once COMPONENT_PATH . 'head.php';
-require_once SHARED_PATH . 'apiRequest.php';
+require_once SHARED_PATH . 'admin.php';
 
 // Récupérer toutes les commandes via API Gateway
 $orders = makeApiRequest('AdminOrder', 'getAllOrders');
@@ -34,6 +16,15 @@ foreach ($orders as $order) {
 // Statuts possibles
 $possibleStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Dashbord</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main class="admin-orders" role="main">
     <div class="page-header">

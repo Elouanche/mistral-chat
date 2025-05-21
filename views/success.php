@@ -2,11 +2,8 @@
 
 use PHPUnit\Framework\SyntheticError;
 
-ini_set('display_errors', 1); 
-error_reporting(E_ALL);  
-require_once SHARED_PATH . "session.php"; 
-require_once COMPONENT_PATH . "head.php";  
-require_once SHARED_PATH . 'apiRequest.php';
+
+
 
 // Récupération des paramètres
 $type = $_GET['type'] ?? 'order'; // Type de succès (order, email, etc.)
@@ -99,10 +96,15 @@ $returnButtons = [
 
 $returnButton = $returnButtons[$type] ?? $returnButtons['default'];
 ?>
-<style>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Conversations</title>
+</head>
 
-
-</style>
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main role="main" class="success-page" data-type="<?= htmlspecialchars($type) ?>" data-order-id="<?= htmlspecialchars($orderId ?? '') ?>" data-user-email="<?= htmlspecialchars($userEmail ?? '') ?>">
     <h1><?= htmlspecialchars($title) ?></h1>

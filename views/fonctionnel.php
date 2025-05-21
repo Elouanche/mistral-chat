@@ -16,9 +16,16 @@ function renderForm($id, $title, $fields, $submitText) {
     echo "</form>";
 }
 
-require_once SHARED_PATH . "session.php";
-require_once COMPONENT_PATH . "head.php";
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Conversations</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main role="main" class="main-content">
     <div class="zone-test">

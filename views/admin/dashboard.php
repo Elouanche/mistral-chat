@@ -1,18 +1,5 @@
 <?php
-require_once CONFIG_PATH . 'log_config.php';
-require_once SHARED_PATH . 'session.php';
-require_once COMPONENT_PATH . 'head.php';
-
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-// Vérification de l'admin
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== 'admin') {
-    header('Location: /user/login');
-    exit;
-}
-
-logInfo("Admin access granted for: " . $_SESSION['admin']);
+require_once SHARED_PATH . 'admin.php';
 
 // Fonction pour afficher un formulaire générique
 function renderForm($id, $title, $fields, $submitText) {
@@ -34,10 +21,21 @@ function renderForm($id, $title, $fields, $submitText) {
     echo "</section>";
 }
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Dashbord</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
+
 
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/orders.css">
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/delivery.css">
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/admin-modal.css">
+
 
 <main role="main">
     <div class="admin-dashboard">

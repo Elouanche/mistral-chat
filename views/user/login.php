@@ -16,10 +16,16 @@ if (isset($_SESSION['user_id'])) {
     }
     exit;
 }
-
-require_once COMPONENT_PATH . 'head.php';
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Login</title>
+</head>
 
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/login.css">
 
 <main role="main" class="login">

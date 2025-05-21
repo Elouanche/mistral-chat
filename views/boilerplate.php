@@ -1,5 +1,12 @@
-<?php require_once SHARED_PATH . "session.php"; ?>
-<?php require_once COMPONENT_PATH . "head.php"; ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Boilerplate</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main id="main-content" role="main"  class="cancel-page">
     <div class="container">

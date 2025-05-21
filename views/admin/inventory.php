@@ -1,27 +1,21 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
-require_once SHARED_PATH . "session.php";
+require_once SHARED_PATH . 'admin.php';
 
-// Sécurité : vérifier les droits admin avant toute action
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== 'admin') {
-    header('Location: /user/login');
-    exit;
-}
 
-// Middleware spécifique pour la zone admin
-if (strpos($_SERVER['REQUEST_URI'], '/admin/') === 0) {
-    require_once SHARED_PATH . 'adminMiddleware.php';
-    checkAdminAccess();
-}
-
-require_once COMPONENT_PATH . 'head.php';
-require_once SHARED_PATH . 'apiRequest.php';
 
 // Récupération des produits via API Gateway
 $products = makeApiRequest('AdminProduct', 'getAllProducts');
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Dashbord</title>
+</head>
+
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/admin-inventory.css">
 

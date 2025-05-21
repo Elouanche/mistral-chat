@@ -1,11 +1,12 @@
-<?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <?php require_once COMPONENT_PATH . 'head.php'; ?>
+    <title>Mistral Chat - Terms</title>
+</head>
 
-require_once SHARED_PATH . "session.php";
-require_once COMPONENT_PATH . "head.php";
-?>
-
+<body>
+    <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <main class="terms-page"  role="main">
     <h1>Conditions d'utilisation</h1>
