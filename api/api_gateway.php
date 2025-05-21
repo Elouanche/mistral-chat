@@ -5,6 +5,8 @@
 
 require_once "../DIR.php";
 require_once CONFIG_PATH . "log_config.php";
+require_once BASE_PATH . "/env_helper.php";
+
 
 // Partagés
 require_once SHARED_PATH . "image.php";
@@ -13,29 +15,7 @@ require_once SHARED_PATH . "erreur.php";
 require_once CONFIG_PATH . "coDB.php";
 require_once API_PATH . "handleService.php";
 require_once CONFIG_PATH . "mail.php";
-/*
-// Services utilisateurs
-require_once SERVICES_PATH . "auth-service/src/Auth.php";
-require_once SERVICES_PATH . "user-service/src/User.php";
-require_once SERVICES_PATH . "product-service/src/Product.php";
-require_once SERVICES_PATH . "cart-service/src/Cart.php";
-require_once SERVICES_PATH . "cart-service/src/CartItem.php";
-require_once SERVICES_PATH . "cart-service/src/CartManager.php";
-require_once SERVICES_PATH . "cart-service/src/SessionCart.php";
-require_once SERVICES_PATH . "order-service/src/Order.php";
-require_once SERVICES_PATH . "returned-service/src/Returned.php";
-require_once SERVICES_PATH . "review-service/src/Review.php";
-// Services système
-require_once SERVICES_PATH . "payment-service/src/Payment.php";
-require_once SERVICES_PATH . "notification-service/src/Notification.php";
-require_once SERVICES_PATH . "delivery-service/src/Delivery.php";
-require_once SERVICES_PATH . "import-service/src/Import.php";
-require_once SERVICES_PATH . "analytics-service/src/Analytics.php";
 
-// Services communs
-require_once SERVICES_PATH . "errorHandling-service/src/ErrorHandling.php";
-require_once SERVICES_PATH . "monitoring-service/src/Monitoring.php";
-*/
 
 require_once SERVICE_CRUD_PATH . "AuthService.php";
 require_once SERVICE_CRUD_PATH . "UserService.php";
@@ -47,7 +27,6 @@ require_once SERVICE_CRUD_PATH . "PaymentService.php";
 require_once SERVICE_CRUD_PATH . "NotificationService.php";
 require_once SERVICE_CRUD_PATH . "DeliveryService.php";
 require_once SERVICE_CRUD_PATH . "SupportService.php";
-//require_once SERVICE_CRUD_PATH . "ImportService.php";
 require_once SERVICE_CRUD_PATH . "AnalyticsService.php";
 require_once SERVICE_CRUD_PATH . "MonitoringService.php";
 require_once SERVICE_CRUD_PATH . "ErrorLoggingService.php";
@@ -182,14 +161,14 @@ function routeRequest($conn, $service, $action, $data) {
         },
         'Order' => function() use ($conn, $action, $data) {
             return handleOrderService($conn, $action, $data);
-        },
+        },/*
         'Returned' => function() use ($conn, $action, $data) {
             return handleReturnedService($conn, $action, $data);
         },
         'Review' => function() use ($conn, $action, $data) {
             return handleReviewService($conn, $action, $data);
         },
-        
+        */
         // Services admin
         'AdminOrder' => function() use ($conn, $action, $data) {
             return handleAdminOrderService($conn, $action, $data);
@@ -213,9 +192,6 @@ function routeRequest($conn, $service, $action, $data) {
         },
         'Delivery' => function() use ($conn, $action, $data) {
             return handleDeliveryService($conn, $action, $data);
-        },
-        'Import' => function() use ($conn, $action, $data) {
-            return handleImportService($conn, $action, $data);
         },
         'Analytics' => function() use ($conn, $action, $data) {
             return handleAnalyticsService($conn, $action, $data);

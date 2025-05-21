@@ -24,15 +24,16 @@ async function postData(data) {
         
 
         const contentType = response.headers.get("Content-Type");
-
+        
         if (contentType && contentType.includes("application/pdf")) {
             const blob = await response.blob();
             const fileUrl = window.URL.createObjectURL(blob);
-
+        
             window.open(fileUrl, '_blank');
-
+            
             return { status: "success", message: "PDF opened and download triggered." };
         }
+
         const text = await response.text();
         let jsonResponse;
 

@@ -1,6 +1,5 @@
 <?php
-require_once CONFIG_PATH . "log_config.php";
-require_once BASE_PATH . "/env_helper.php";
+
 
 function coDB() {  
     $serveur = get_env_variable('DB_HOST');

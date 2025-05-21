@@ -9,8 +9,12 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(191) NOT NULL UNIQUE,
     email VARCHAR(191) NOT NULL UNIQUE,
     phone VARCHAR(15),
-    password_hash VARCHAR(191) NOT NULL,
+    password_hash VARCHAR(191),
     is_admin BOOLEAN DEFAULT FALSE,
+    google_id VARCHAR(191),
+    oauth_provider VARCHAR(20),
+    oauth_token TEXT,
+    oauth_expires DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE = InnoDB;

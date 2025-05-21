@@ -1,0 +1,12 @@
+{
+    "require-dev": {
+        "phpunit/phpunit": "10"
+    },
+    "require": {
+        "firebase/php-jwt": "5.0",
+        "phpmailer/phpmailer": "^6.9",
+        "stripe/stripe-php": "^17.1",
+        "setasign/fpdf": "^1.8",
+        "vlucas/phpdotenv": "^5.6"
+    }
+}

@@ -1,6 +1,11 @@
 <?php
 // views/user/account.php
 require_once SHARED_PATH . 'session.php';
+// Charger les variables d'environnement
+require_once BASE_PATH . '/env_helper.php';
+
+// Charger les configurations OAuth
+require_once CONFIG_PATH . 'oauth_config.php';
 
 // Redirection si l'utilisateur est déjà connecté
 if (isset($_SESSION['user_id'])) {
@@ -31,6 +36,15 @@ require_once COMPONENT_PATH . 'head.php';
             </div>
             <button type="submit" class="button-spe">Se connecter</button>
         </form>
+        
+        <!-- Ajout du bouton Google -->
+        <div class="oauth-buttons">
+            <button type="button" id="googleLogin" class="google-btn">
+                <img src="<?= htmlspecialchars(STATIC_URL); ?>img/google-icon.svg" alt="Google Icon">
+                Se connecter avec Google
+            </button>
+        </div>
+        
         <div id="loginErrorMessage" class="error-message" role="alert" hidden></div>
     </section>
 
@@ -66,8 +80,41 @@ require_once COMPONENT_PATH . 'head.php';
 </main>
 
 <!-- Scripts -->
-
-
 <script src="<?= htmlspecialchars(STATIC_URL); ?>js/page-login.js" defer></script>
+
+<!-- Ajout du SDK Google -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+function handleCredentialResponse(response) {
+    // Envoyer le token ID au backend
+    fetch('/auth/google/callback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({credential: response.credential})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = data.redirect;
+        } else {
+            document.getElementById('loginErrorMessage').textContent = data.message;
+            document.getElementById('loginErrorMessage').hidden = false;
+        }
+    });
+}
+
+window.onload = function () {
+    google.accounts.id.initialize({
+        client_id: '<?= GOOGLE_CLIENT_ID ?>',
+        callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(
+        document.getElementById("googleLogin"),
+        { theme: "outline", size: "large" }
+    );
+};
+</script>
 
 <?php require_once COMPONENT_PATH . 'foot.php'; ?>

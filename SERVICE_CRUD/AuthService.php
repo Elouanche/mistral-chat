@@ -1,6 +1,7 @@
 <?php
 require_once CRUD_PATH . '/UsersCRUD.php';
 
+
 /**
  * Service d'authentification
  * Utilise UsersCRUD pour les opérations d'authentification
@@ -346,5 +347,96 @@ class AuthService {
      */
     private function generateAdminCode() {
         return sprintf("%06d", mt_rand(100000, 999999));
+    }
+
+    /**
+     * Gère la connexion via Google OAuth2
+     * 
+     * @param array $data Données du profil Google
+     * @return array Statut de l'opération
+     */
+    public function handleGoogleLogin($googleData) {
+        logInfo("Google login attempt", ['email' => $googleData['email'] ?? 'not provided']);
+        
+        if (!isset($googleData['email']) || !isset($googleData['sub'])) {
+            logError("Google login failed - missing data");
+            return ['status' => 'error', 'message' => 'Invalid Google data'];
+        }
+
+        // Vérifie si l'utilisateur existe déjà avec cet email ou Google ID
+        $users = $this->usersCRUD->get(
+            ['id', 'username', 'email', 'is_admin', 'google_id'],
+            [
+                'OR' => [
+                    'email' => $googleData['email'],
+                    'google_id' => $googleData['sub']
+                ]
+            ]
+        );
+
+        if (empty($users)) {
+            // Créer un nouvel utilisateur
+            $username = $this->generateUniqueUsername($googleData['given_name'] ?? $googleData['email']);
+            $userData = [
+                'username' => $username,
+                'email' => $googleData['email'],
+                'google_id' => $googleData['sub'],
+                'oauth_provider' => 'google',
+                'oauth_token' => $googleData['access_token'] ?? null,
+                'oauth_expires' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+            ];
+            
+            $userId = $this->usersCRUD->insert($userData);
+            if (!$userId) {
+                logError("Google login failed - could not create user");
+                return ['status' => 'error', 'message' => 'Failed to create user'];
+            }
+            
+            $user = $this->usersCRUD->get(['*'], ['id' => $userId])[0];
+        } else {
+            $user = $users[0];
+            // Mettre à jour les informations OAuth
+            $this->usersCRUD->update(
+                [
+                    'google_id' => $googleData['sub'],
+                    'oauth_provider' => 'google',
+                    'oauth_token' => $googleData['access_token'] ?? null,
+                    'oauth_expires' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+                ],
+                ['id' => $user['id']]
+            );
+        }
+
+        // Créer la session
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_username'] = $user['username'];
+        $_SESSION['user_email'] = $user['email'];
+        if ($user['is_admin']) {
+            $_SESSION['admin'] = 'admin';
+        }
+
+        logInfo("Google login successful", ['user_id' => $user['id']]);
+        return [
+            'status' => 'success',
+            'message' => 'Login successful',
+            'data' => ['user' => $user],
+            'redirect' => $user['is_admin'] ? '/admin/dashboard' : '/user/account'
+        ];
+    }
+
+    /**
+     * Génère un nom d'utilisateur unique basé sur un nom donné
+     */
+    private function generateUniqueUsername($baseName) {
+        $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $baseName));
+        $originalUsername = $username;
+        $counter = 1;
+        
+        while ($this->usersCRUD->get(['id'], ['username' => $username])) {
+            $username = $originalUsername . $counter;
+            $counter++;
+        }
+        
+        return $username;
     }
 }

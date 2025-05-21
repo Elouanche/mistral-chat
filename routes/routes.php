@@ -5,8 +5,9 @@ return [
     '' => 'home',
     '/' => 'home',
     '/home' => 'home',
-    '/cart' => 'cart',
-    '/checkout' => 'checkout',
+    '/chat' => 'chat/index',
+    '/chat/history' => 'chat/history',
+    '/subscription' => 'subscription/index',
     '/order-success' => 'success',
     '/email-success' => 'success',
     '/contact-success' => 'success',
@@ -14,7 +15,6 @@ return [
     '/payment-success' => 'success',
     '/success' => 'success',
     '/cancel' => 'cancel',
-    '/returns' => 'returns',
     
     // Administration
     '/admin/dashboard' => 'admin/dashboard',

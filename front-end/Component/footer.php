@@ -4,7 +4,7 @@
       <section aria-labelledby="a-propos">
         <h3 id="a-propos">À propos</h3>
         <p>
-          Le <strong>Tournevisse™</strong>, robuste, pratique et intelligent, il s’adapte à toutes les situations, que vous soyez bricoleur amateur ou professionnel.
+          <strong>Mistral Chat</strong> est une plateforme de conversation IA avancée qui vous permet d'interagir avec les modèles d'intelligence artificielle de Mistral AI pour répondre à vos questions et vous assister dans vos tâches quotidiennes.
         </p>
       </section>
   
