@@ -5,7 +5,7 @@ if (!defined('SECURE_ACCESS')) {
     exit('Accès interdit');
 }
 
-require_once BASE_PATH . '/env_helper.php';
+require_once BASE_PATH . 'env_helper.php';
 
 $shipstation_api_key = get_env_variable('SHIPSTATION_API_KEY');
 $shipstation_api_secret = get_env_variable('SHIPSTATION_API_SECRET');

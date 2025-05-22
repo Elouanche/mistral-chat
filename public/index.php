@@ -10,12 +10,12 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Si c'est une requête API
 if (strpos($path, '/api/') === 0) {
-    require_once BASE_PATH . '/api/api_gateway.php';
+    require_once BASE_PATH . 'api/api_gateway.php';
     exit;
 }
 
 // Pour les routes normales
-$routes = require_once BASE_PATH . '/routes/routes.php';
+$routes = require_once BASE_PATH . 'routes/routes.php';
 $uri = rtrim($path, '/');
 
 try {

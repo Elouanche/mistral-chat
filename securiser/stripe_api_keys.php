@@ -1,6 +1,6 @@
 <?php
 
-require_once BASE_PATH . '/env_helper.php';
+require_once BASE_PATH . 'env_helper.php';
 // Empêcher l'accès direct au fichier
 if (!defined('SECURE_ACCESS')) {
     header('HTTP/1.0 403 Forbidden');
