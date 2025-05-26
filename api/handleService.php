@@ -17,6 +17,15 @@ require_once SERVICE_CRUD_PATH . "SupportService.php";
 require_once SERVICE_CRUD_PATH . "AnalyticsService.php";
 require_once SERVICE_CRUD_PATH . "MonitoringService.php";
 require_once SERVICE_CRUD_PATH . "ErrorLoggingService.php";
+
+
+
+require_once SERVICE_CRUD_PATH . "MistralApiService.php";
+require_once SERVICE_CRUD_PATH . "ApiQuotaService.php"; 
+require_once SERVICE_CRUD_PATH . "AiConversationService.php";
+
+
+
 global $isAdmin;
 function handleAuthService($conn, $action, $data) {
     $auth = new AuthService($conn);
@@ -386,6 +395,59 @@ function handleSupportService($conn, $action, $data) {
             return $support->createConversation($data);
         case 'addMessage':
             return $support->addMessage($data);
+        default:
+            logError("Invalid $action action requested", ['action' => $action]);
+            return ['status' => 'error', 'message' => 'Invalid action'];
+    }
+}
+
+
+
+
+function handleMistralApiService($conn, $action, $data) {
+    $mistralApi = new MistralApiService($conn);
+    
+    switch ($action) {
+        case 'sendChatRequest':
+            return $mistralApi->sendChatRequest($data);
+        default:
+            logError("Invalid $action action requested", ['action' => $action]);
+            return ['status' => 'error', 'message' => 'Invalid action'];
+    }
+}
+
+function handleApiQuotaService($conn, $action, $data) {
+    $apiQuota = new ApiQuotaService($conn);
+    
+    switch ($action) {
+        case 'checkUserQuota':
+            return $apiQuota->checkUserQuota($data);
+        case 'updateUserQuota':
+            return $apiQuota->updateUserQuota($data);
+        case 'getUserQuota':
+            return $apiQuota->getUserQuota($data);
+        default:
+            logError("Invalid $action action requested", ['action' => $action]);
+            return ['status' => 'error', 'message' => 'Invalid action'];
+    }
+}
+
+function handleAiConversationService($conn, $action, $data) {
+    $aiConversation = new AiConversationService($conn);
+    
+    switch ($action) {
+        case 'getUserConversations':
+            return $aiConversation->getUserConversations($data);
+        case 'getConversation':
+            return $aiConversation->getConversation($data);
+        case 'createConversation':
+            return $aiConversation->createConversation($data);
+        case 'updateConversation':
+            return $aiConversation->updateConversation($data);
+        case 'archiveConversation':
+            return $aiConversation->archiveConversation($data);
+        case 'deleteConversation':
+            return $aiConversation->deleteConversation($data);
         default:
             logError("Invalid $action action requested", ['action' => $action]);
             return ['status' => 'error', 'message' => 'Invalid action'];

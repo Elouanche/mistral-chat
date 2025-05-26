@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Enregistrement des changements de statut
     const saveButtons = document.querySelectorAll('.save-status-btn');
     saveButtons.forEach(button => {
         button.addEventListener('click', async function() {
@@ -63,22 +62,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const newStatus = statusSelect.value;
             
             try {
-                const response = await fetch('/api/api_gateway.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        service: 'Order',
-                        action: 'updateOrderStatus',
-                        data: { 
-                            order_id: orderId,
-                            status: newStatus 
-                        }
-                    })
-                });
-                
-                const result = await response.json();
+                const context = {
+                    service: 'Order',
+                    action: 'updateOrderStatus',
+                    data: { 
+                        order_id: orderId,
+                        status: newStatus 
+                    }
+                };
+
+                const result = await postData(context);
                 
                 if (result.status === 'success') {
                     alert('Statut mis à jour avec succès!');

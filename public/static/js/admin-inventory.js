@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentStock = row.querySelector('.current-stock').textContent;
             const newStock = row.querySelector('.stock-input').value;
             
-            // Ajouter seulement les produits dont le stock a changé
             if (currentStock !== newStock) {
                 productsToUpdate.push({
                     id: productId,
@@ -45,23 +44,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            const response = await fetch('/api/api_gateway.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    service: 'Product',
-                    action: 'updateStocks',
-                    data: { products: productsToUpdate }
-                })
-            });
-            
-            const result = await response.json();
+            const context = {
+                service: 'Product',
+                action: 'updateStocks',
+                data: { products: productsToUpdate }
+            };
+
+            const result = await postData(context);
             
             if (result.status === 'success') {
                 alert('Stocks mis à jour avec succès!');
-                // Mettre à jour les valeurs de stock actuelles dans le tableau
                 productsToUpdate.forEach(product => {
                     const row = inventoryTable.querySelector(`tr[data-product-id="${product.id}"]`);
                     if (row) {

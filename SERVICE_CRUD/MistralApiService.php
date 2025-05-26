@@ -1,8 +1,8 @@
 <?php
-require_once CRUD_PATH . '/AiRequestsCRUD.php';
-require_once CRUD_PATH . '/AiResponsesCRUD.php';
-require_once CRUD_PATH . '/ApiUsageCRUD.php';
-require_once SHARED_PATH . '/apiRequest.php';
+require_once CRUD_PATH . 'AiRequestsCRUD.php';
+require_once CRUD_PATH . 'AiMessagesCRUD.php';
+require_once CRUD_PATH . 'ApiUsageCRUD.php';
+require_once SHARED_PATH . 'apiRequest.php';
 
 /**
  * Service pour l'interaction avec l'API Mistral
@@ -11,8 +11,8 @@ class MistralApiService {
     /** @var AiRequestsCRUD $requestsCRUD Instance du CRUD pour les requêtes */
     private $requestsCRUD;
     
-    /** @var AiResponsesCRUD $responsesCRUD Instance du CRUD pour les réponses */
-    private $responsesCRUD;
+    /** @var AiMessagesCRUD $AiMessagesCRUD Instance du CRUD pour les réponses */
+    private $AiMessagesCRUD;
     
     /** @var ApiUsageCRUD $usageCRUD Instance du CRUD pour l'utilisation */
     private $usageCRUD;
@@ -31,13 +31,36 @@ class MistralApiService {
      */
     public function __construct($mysqli, $apiKey = null) {
         $this->requestsCRUD = new AiRequestsCRUD($mysqli);
-        $this->responsesCRUD = new AiResponsesCRUD($mysqli);
+        $this->AiMessagesCRUD = new AiMessagesCRUD($mysqli);
         $this->usageCRUD = new ApiUsageCRUD($mysqli);
         
         // Utiliser la clé API fournie ou récupérer celle par défaut
         $this->apiKey = $apiKey ?? get_env_variable('MISTRAL_API_KEY');
         
         logInfo("MistralApiService initialized");
+    }
+    
+    /**
+     * Récupère la liste des modèles disponibles
+     * 
+     * @return array Liste des modèles actifs
+     */
+    public function getModels() {
+        try {
+            $modelsCRUD = new AiModelsCRUD($this->requestsCRUD->mysqli);
+            $models = $modelsCRUD->get(['*'], ['is_active' => 1]);
+            
+            return [
+                'status' => 'success',
+                'data' => $models
+            ];
+        } catch (Exception $e) {
+            logError("Erreur lors de la récupération des modèles", ['error' => $e->getMessage()]);
+            return [
+                'status' => 'error',
+                'message' => "Erreur lors de la récupération des modèles"
+            ];
+        }
     }
     
     /**
@@ -57,7 +80,10 @@ class MistralApiService {
             }
             
             // Récupérer le nom du modèle à partir de l'ID
-            $modelName = $this->getModelName($data['model_id']);
+            $modelsCRUD = new AiModelsCRUD($this->requestsCRUD->mysqli);
+            $models = $modelsCRUD->get(['model_name'], ['id' => $data['model_id'], 'is_active' => 1]);
+            $modelName = !empty($models) ? $models[0]['model_name'] : null;
+            
             if (!$modelName) {
                 return [
                     'status' => 'error',
@@ -133,7 +159,7 @@ class MistralApiService {
                 'raw_response' => json_encode($response)
             ];
             
-            $responseId = $this->responsesCRUD->createResponse($responseData);
+            $responseId = $this->AiMessagesCRUD->createResponse($responseData);
             
             // Enregistrer l'utilisation des tokens
             if (isset($response['usage'])) {
@@ -175,20 +201,6 @@ class MistralApiService {
                 'message' => "Erreur lors de la communication avec l'API Mistral: " . $e->getMessage()
             ];
         }
-    }
-    
-    /**
-     * Récupère le nom du modèle à partir de son ID
-     * 
-     * @param int $modelId ID du modèle
-     * @return string|null Nom du modèle ou null si non trouvé
-     */
-    private function getModelName($modelId) {
-        // Créer une instance temporaire du CRUD des modèles
-        $modelsCRUD = new AiModelsCRUD($this->requestsCRUD->mysqli);
-        $models = $modelsCRUD->get(['model_name'], ['id' => $modelId, 'is_active' => 1]);
-        
-        return !empty($models) ? $models[0]['model_name'] : null;
     }
     
     /**

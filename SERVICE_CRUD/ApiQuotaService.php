@@ -25,7 +25,6 @@ class ApiQuotaService {
         $this->quotasCRUD = new ApiQuotasCRUD($mysqli);
         $this->requestsCRUD = new AiRequestsCRUD($mysqli);
         $this->usageCRUD = new ApiUsageCRUD($mysqli);
-        logInfo("ApiQuotaService initialized");
     }
     
     /**
@@ -45,46 +44,28 @@ class ApiQuotaService {
             }
             
             // Récupérer les quotas de l'utilisateur
-            $quota = $this->quotasCRUD->getUserQuota($data['user_id']);
+            $quota = $this->quotasCRUD->get(['*'], ['user_id' => $data['user_id']]);
+            $quota = !empty($quota) ? $quota[0] : null;
             
             // Si l'utilisateur n'a pas de quotas définis, créer des quotas par défaut
             if (!$quota) {
-                $defaultQuota = [
+                // Créer quota par défaut
+                $quotaId = $this->quotasCRUD->insert([
                     'user_id' => $data['user_id'],
                     'max_tokens_per_day' => 10000,
                     'max_requests_per_minute' => 10,
-                    'max_monthly_cost' => 10.00,
-                    'is_unlimited' => false
-                ];
-                
-                $quotaId = $this->quotasCRUD->createQuota($defaultQuota);
-                $quota = $this->quotasCRUD->getUserQuota($data['user_id']);
-                
-                if (!$quota) {
-                    return [
-                        'status' => 'error',
-                        'message' => "Erreur lors de la création des quotas par défaut"
-                    ];
-                }
+                    'max_monthly_cost' => 10.00
+                ]);
+                $quota = $this->quotasCRUD->get(['*'], ['id' => $quotaId])[0];
             }
             
-            // Si l'utilisateur a un quota illimité, autoriser la requête
-            if ($quota['is_unlimited']) {
-                return [
-                    'status' => 'success',
-                    'data' => [
-                        'can_make_request' => true,
-                        'quota' => $quota
-                    ]
-                ];
-            }
+            // Vérifier les limites
+            $requestCount = $this->requestsCRUD->count([
+                'user_id' => $data['user_id'],
+                'created_at >=' => date('Y-m-d H:i:s', strtotime('-1 minute'))
+            ]);
             
-            // Vérifier le nombre de requêtes par minute
-            $now = date('Y-m-d H:i:s');
-            $oneMinuteAgo = date('Y-m-d H:i:s', strtotime('-1 minute'));
-            $requestsLastMinute = $this->requestsCRUD->countUserRequests($data['user_id'], $oneMinuteAgo, $now);
-            
-            if ($requestsLastMinute >= $quota['max_requests_per_minute']) {
+            if ($requestCount >= $quota['max_requests_per_minute']) {
                 return [
                     'status' => 'error',
                     'message' => "Limite de requêtes par minute atteinte. Veuillez réessayer dans quelques instants.",
@@ -93,7 +74,7 @@ class ApiQuotaService {
                         'reason' => 'rate_limit_exceeded',
                         'quota' => $quota,
                         'current_usage' => [
-                            'requests_last_minute' => $requestsLastMinute
+                            'requests_last_minute' => $requestCount
                         ]
                     ]
                 ];
@@ -147,7 +128,7 @@ class ApiQuotaService {
                     'can_make_request' => true,
                     'quota' => $quota,
                     'current_usage' => [
-                        'requests_last_minute' => $requestsLastMinute,
+                        'requests_last_minute' => $requestCount,
                         'tokens_today' => $totalTokensToday,
                         'monthly_cost' => $monthlyCost
                     ]

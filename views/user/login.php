@@ -3,9 +3,8 @@
 require_once SHARED_PATH . 'session.php';
 // Charger les variables d'environnement
 require_once BASE_PATH . 'env_helper.php';
-
 // Charger les configurations OAuth
-require_once CONFIG_PATH . 'oauth_config.php';
+require_once BASE_PATH . 'securiser/oauth_config.php';
 
 // Redirection si l'utilisateur est déjà connecté
 if (isset($_SESSION['user_id'])) {

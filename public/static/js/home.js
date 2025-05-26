@@ -7,38 +7,36 @@ document.addEventListener('DOMContentLoaded', function() {
     loadModels();
     
     // Fonction pour charger les modèles disponibles
-    function loadModels() {
-        // Afficher le spinner de chargement
+    async function loadModels() {
         if (modelsLoading) {
             modelsLoading.style.display = 'flex';
         }
         
-        // Récupérer les modèles depuis l'API
-        fetch('/api/models')
-            .then(response => response.json())
-            .then(data => {
-                // Masquer le spinner de chargement
-                if (modelsLoading) {
-                    modelsLoading.style.display = 'none';
-                }
-                
-                if (data.status === 'success' && modelsGrid) {
-                    // Afficher les modèles
-                    data.data.forEach(model => {
-                        modelsGrid.appendChild(createModelCard(model));
-                    });
-                } else {
-                    console.error('Erreur lors du chargement des modèles:', data.message);
-                }
-            })
-            .catch(error => {
-                // Masquer le spinner de chargement
-                if (modelsLoading) {
-                    modelsLoading.style.display = 'none';
-                }
-                
-                console.error('Erreur lors du chargement des modèles:', error);
-            });
+        const context = {
+            service: 'AI',
+            action: 'getModels'
+        };
+
+        try {
+            const data = await postData(context);
+            
+            if (modelsLoading) {
+                modelsLoading.style.display = 'none';
+            }
+            
+            if (data.status === 'success' && modelsGrid) {
+                data.data.forEach(model => {
+                    modelsGrid.appendChild(createModelCard(model));
+                });
+            } else {
+                console.error('Erreur lors du chargement des modèles:', data.message);
+            }
+        } catch (error) {
+            if (modelsLoading) {
+                modelsLoading.style.display = 'none';
+            }
+            console.error('Erreur lors du chargement des modèles:', error);
+        }
     }
     
     // Fonction pour créer une carte de modèle

@@ -25,7 +25,6 @@ class AiConversationService {
         $this->conversationsCRUD = new AiConversationsCRUD($mysqli);
         $this->messagesCRUD = new AiMessagesCRUD($mysqli);
         $this->modelsCRUD = new AiModelsCRUD($mysqli);
-        logInfo("AiConversationService initialized");
     }
     
     /**
@@ -45,7 +44,16 @@ class AiConversationService {
             }
             
             $includeArchived = isset($data['include_archived']) ? (bool)$data['include_archived'] : false;
-            $conversations = $this->conversationsCRUD->getUserConversations($data['user_id'], $includeArchived);
+           
+             $filters = ['user_id' => $data['user_id']];
+        
+            if (!$includeArchived) {
+                $filters['is_archived'] = 0;
+            }
+            
+            $options = ['order_by' => ['updated_at' => 'DESC']];
+            
+            $conversations =  $this->conversationsCRUD->get(['*'], $filters, $options);
             
             // Ajouter le dernier message pour chaque conversation
             foreach ($conversations as &$conversation) {
@@ -53,7 +61,14 @@ class AiConversationService {
                 $conversation['last_message'] = $lastMessage;
                 
                 // Compter le nombre de messages
-                $messages = $this->messagesCRUD->getConversationMessages($conversation['id']);
+                $conversationId = $data['conversation_id'];
+                
+                // Mettre à jour ou créer le message système
+               
+                $filters = ['conversation_id' => $conversationId];
+                $options = ['order_by' => ['created_at' => 'ASC']];
+                
+                $messages =  $this->messagesCRUD->get(['*'], $filters, $options);
                 $conversation['message_count'] = count($messages);
             }
             
@@ -85,10 +100,19 @@ class AiConversationService {
                     'message' => "L'ID de la conversation est obligatoire"
                 ];
             }
+            $conversationId = $data['conversation_id'];
             
             $userId = $data['user_id'] ?? null;
-            $conversation = $this->conversationsCRUD->getConversation($data['conversation_id'], $userId);
+           
+             $filters = ['id' => $conversationId];
+        
+            // Si un ID utilisateur est fourni, vérifier que la conversation lui appartient
+            if ($userId !== null) {
+                $filters['user_id'] = $userId;
+            }
             
+            $results = $this->conversationsCRUD->get(['*'], $filters);
+            $conversation = !empty($results) ? $results[0] : null;
             if (!$conversation) {
                 return [
                     'status' => 'error',
@@ -97,7 +121,14 @@ class AiConversationService {
             }
             
             // Récupérer les messages de la conversation
-            $messages = $this->messagesCRUD->getConversationMessages($data['conversation_id']);
+            $conversationId = $data['conversation_id'];
+                
+                // Mettre à jour ou créer le message système
+               
+            $filters = ['conversation_id' => $conversationId];
+            $options = ['order_by' => ['created_at' => 'ASC']];
+                
+            $messages =  $this->messagesCRUD->get(['*'], $filters, $options);
             $conversation['messages'] = $messages;
             
             // Récupérer les informations du modèle
@@ -152,7 +183,7 @@ class AiConversationService {
             ];
             
             // Créer la conversation
-            $conversationId = $this->conversationsCRUD->createConversation($conversationData);
+            $conversationId = $this->conversationsCRUD->insert($conversationData);
             
             if (!$conversationId) {
                 return [
@@ -217,9 +248,14 @@ class AiConversationService {
             
             if (isset($data['system_prompt'])) {
                 $updateData['system_prompt'] = $data['system_prompt'];
+                $conversationId = $data['conversation_id'];
                 
                 // Mettre à jour ou créer le message système
-                $messages = $this->messagesCRUD->getConversationMessages($data['conversation_id']);
+               
+                $filters = ['conversation_id' => $conversationId];
+                $options = ['order_by' => ['created_at' => 'ASC']];
+                
+                 $messages =  $this->messagesCRUD->get(['*'], $filters, $options);
                 $systemMessageExists = false;
                 
                 foreach ($messages as $message) {
@@ -254,7 +290,7 @@ class AiConversationService {
             }
             
             // Mettre à jour la conversation
-            $success = $this->conversationsCRUD->updateConversation($data['conversation_id'], $updateData, $userId);
+           $success = $this->conversationsCRUD->update($updateData, ['id' => $data['conversation_id']]);
             
             if (!$success) {
                 return [

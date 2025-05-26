@@ -63,89 +63,71 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function loadModels() {
-        fetch('/api/models')
-            .then(response => response.json())
+        const context = {
+            service: 'MistralApi',
+            action: 'getModels',
+            data: {}
+        };
+
+        postData(context)
             .then(data => {
                 if (data.status === 'success') {
-                    // Ajouter les options de modèles au filtre
-                    data.data.forEach(model => {
-                        const option = document.createElement('option');
-                        option.value = model.id;
-                        option.textContent = model.display_name;
-                        modelFilter.appendChild(option);
-                    });
+                    models = data.data || [];
+                    renderModels();
+                    populateModelSelect();
+                } else {
+                    console.error('Erreur:', data.message);
+                    showNotification('Erreur lors du chargement des modèles', 'error');
                 }
             })
             .catch(error => {
-                console.error('Erreur lors du chargement des modèles:', error);
+                console.error('Erreur:', error);
                 showNotification('Erreur lors du chargement des modèles', 'error');
             });
     }
     
+    
     function loadConversations() {
-        // Afficher le spinner de chargement
         historyLoading.style.display = 'flex';
         conversationsGrid.innerHTML = '';
-        
-        // Construire les paramètres de requête
-        const params = new URLSearchParams();
-        params.append('page', currentPage);
-        
-        if (currentFilters.date !== 'all') {
-            params.append('date_filter', currentFilters.date);
-        }
-        
-        if (currentFilters.model !== 'all') {
-            params.append('model_id', currentFilters.model);
-        }
-        
-        if (currentFilters.search) {
-            params.append('search', currentFilters.search);
-        }
-        
-        // Récupérer les conversations
-        fetch(`/api/conversations/history?${params.toString()}`)
-            .then(response => response.json())
+
+        const context = {
+            service: 'AiConversation',
+            action: 'getUserConversations',
+            data: {
+                page: currentPage,
+                date_filter: currentFilters.date !== 'all' ? currentFilters.date : null,
+                model_id: currentFilters.model !== 'all' ? currentFilters.model : null,
+                search: currentFilters.search || null,
+                include_archived: true
+            }
+        };
+
+        postData(context)
             .then(data => {
-                // Masquer le spinner de chargement
                 historyLoading.style.display = 'none';
-                
                 if (data.status === 'success') {
-                    // Mettre à jour la pagination
-                    totalPages = data.meta.total_pages || 1;
+                    totalPages = data.meta?.total_pages || 1;
                     updatePagination();
                     
-                    // Afficher les conversations
-                    if (data.data.length > 0) {
+                    if (data.data && data.data.length > 0) {
                         data.data.forEach(conversation => {
                             conversationsGrid.appendChild(createConversationCard(conversation));
                         });
                     } else {
-                        // Aucune conversation trouvée
-                        const emptyState = document.createElement('div');
-                        emptyState.className = 'empty-state';
-                        emptyState.innerHTML = `
-                            <i class="fas fa-comment-slash"></i>
-                            <h3>Aucune conversation trouvée</h3>
-                            <p>Essayez de modifier vos filtres ou commencez une nouvelle conversation.</p>
-                            <a href="/chat" class="button-primary">Nouvelle conversation</a>
-                        `;
-                        conversationsGrid.appendChild(emptyState);
+                        showEmptyState();
                     }
                 } else {
-                    // Erreur lors du chargement des conversations
                     showNotification(data.message || 'Erreur lors du chargement des conversations', 'error');
                 }
             })
             .catch(error => {
-                // Masquer le spinner de chargement
                 historyLoading.style.display = 'none';
-                
-                console.error('Erreur lors du chargement des conversations:', error);
+                console.error('Erreur:', error);
                 showNotification('Erreur lors du chargement des conversations', 'error');
             });
     }
-    
+        
     function createConversationCard(conversation) {
         const card = document.createElement('div');
         card.className = 'conversation-card';

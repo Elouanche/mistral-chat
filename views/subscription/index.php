@@ -115,8 +115,7 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="<?php echo STATIC_URL; ?>js/subscription.js"></script>
     
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="<?php echo STATIC_URL; ?>js/subscription.js"></script>
+   
     
     <?php require_once COMPONENT_PATH . 'footer.php'; ?>
 </body>

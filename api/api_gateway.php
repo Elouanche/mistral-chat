@@ -31,6 +31,11 @@ require_once SERVICE_CRUD_PATH . "AnalyticsService.php";
 require_once SERVICE_CRUD_PATH . "MonitoringService.php";
 require_once SERVICE_CRUD_PATH . "ErrorLoggingService.php";
 
+
+require_once SERVICE_CRUD_PATH . "MistralApiService.php";
+require_once SERVICE_CRUD_PATH . "ApiQuotaService.php"; 
+require_once SERVICE_CRUD_PATH . "AiConversationService.php";
+
 // Vérifier si la constante pour l'accès sécurisé existe déjà
 if (!defined('SECURE_ACCESS')) {
     define('SECURE_ACCESS', true);
@@ -46,7 +51,9 @@ define('ALLOWED_SERVICES', [
     // Services système
     'Payment', 'Notification', 'Delivery', 'Import', 'Analytics',
     // Services communs
-    'ErrorHandling', 'Monitoring', 'AdminAuth'
+    'ErrorHandling', 'Monitoring', 'AdminAuth',
+    // Nouveaux services IA
+    'MistralApi', 'ApiQuota', 'AiConversation'
 ]);
 
 define('ALLOWED_METHODS', ['POST', 'GET', 'PUT', 'DELETE']);
@@ -203,7 +210,17 @@ function routeRequest($conn, $service, $action, $data) {
         },
         'Monitoring' => function() use ($conn, $action, $data) {
             return handleMonitoringService($conn, $action, $data);
-        }
+        },
+        // Nouveaux services IA
+        'MistralApi' => function() use ($conn, $action, $data) {
+            return handleMistralApiService($conn, $action, $data);
+        },
+        'ApiQuota' => function() use ($conn, $action, $data) {
+            return handleApiQuotaService($conn, $action, $data);
+        },
+        'AiConversation' => function() use ($conn, $action, $data) {
+            return handleAiConversationService($conn, $action, $data);
+        },
     ];
 
     if (!isset($serviceHandlers[$service])) {

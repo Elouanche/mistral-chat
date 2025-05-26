@@ -91,22 +91,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function loadModels() {
-        modelsLoading.style.display = 'flex';
-        
-        fetch('/api/ai/models')
-            .then(response => response.json())
+        const context = {
+            service: 'MistralApi',
+            action: 'getModels',
+            data: {}
+        };
+
+        postData(context)
             .then(data => {
-                models = data.data || [];
-                renderModels();
-                populateModelSelect();
-                modelsLoading.style.display = 'none';
+                if (data.status === 'success') {
+                    models = data.data || [];
+                    renderModels();
+                    populateModelSelect();
+                } else {
+                    console.error('Erreur:', data.message);
+                    showNotification('Erreur lors du chargement des modèles', 'error');
+                }
             })
             .catch(error => {
-                console.error('Erreur lors du chargement des modèles:', error);
-                modelsLoading.style.display = 'none';
+                console.error('Erreur:', error);
+                showNotification('Erreur lors du chargement des modèles', 'error');
             });
     }
-    
+        
     function renderModels() {
         if (!modelsGrid) return;
         
@@ -339,102 +346,42 @@ document.addEventListener('DOMContentLoaded', function() {
         chatInput.disabled = true;
         document.getElementById('send-btn').disabled = true;
         
-        // Ajouter le message de l'utilisateur à l'interface
-        const userMessageElement = document.createElement('div');
-        userMessageElement.className = 'message user';
-        userMessageElement.innerHTML = `
-            <div class="content">${message}</div>
-            <div class="timestamp">${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
-        `;
-        messagesContainer.appendChild(userMessageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // Ajouter un indicateur de chargement pour la réponse
-        const loadingElement = document.createElement('div');
-        loadingElement.className = 'message assistant loading';
-        loadingElement.innerHTML = `
-            <div class="content">
-                <div class="loading-spinner">
-                    <div class="spinner"></div>
-                </div>
-            </div>
-        `;
-        messagesContainer.appendChild(loadingElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // Envoyer le message à l'API
-        fetch('/api/ai/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        showUserMessage(message);
+        showLoadingMessage();
+
+        const context = {
+            service: 'MistralApi',
+            action: 'sendChatRequest',
+            data: {
                 conversation_id: currentConversationId,
-                message: message
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Supprimer l'indicateur de chargement
-            messagesContainer.removeChild(loadingElement);
-            
-            if (data.status === 'success') {
-                // Ajouter la réponse de l'assistant
-                const assistantMessageElement = document.createElement('div');
-                assistantMessageElement.className = 'message assistant';
-                
-                // Formater le contenu avec Markdown
-                const formattedContent = marked.parse(data.data.response);
-                
-                assistantMessageElement.innerHTML = `
-                    <div class="content">${formattedContent}</div>
-                    <div class="timestamp">${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
-                `;
-                
-                messagesContainer.appendChild(assistantMessageElement);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                
-                // Appliquer la coloration syntaxique aux blocs de code
-                assistantMessageElement.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-                
-                // Mettre à jour la liste des conversations pour refléter le nouveau message
-                loadConversations();
-            } else {
-                // Afficher un message d'erreur
-                const errorMessageElement = document.createElement('div');
-                errorMessageElement.className = 'message error';
-                errorMessageElement.innerHTML = `
-                    <div class="content">Erreur: ${data.message || 'Une erreur est survenue lors de l'envoi du message.'}</div>
-                `;
-                messagesContainer.appendChild(errorMessageElement);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                message: message,
+                model_id: currentModelId
             }
-        })
-        .catch(error => {
-            // Supprimer l'indicateur de chargement
-            messagesContainer.removeChild(loadingElement);
-            
-            // Afficher un message d'erreur
-            const errorMessageElement = document.createElement('div');
-            errorMessageElement.className = 'message error';
-            errorMessageElement.innerHTML = `
-                <div class="content">Erreur: Une erreur réseau est survenue. Veuillez réessayer.</div>
-            `;
-            messagesContainer.appendChild(errorMessageElement);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            console.error('Erreur:', error);
-        })
-        .finally(() => {
-            // Réactiver le formulaire
-            chatInput.disabled = false;
-            document.getElementById('send-btn').disabled = false;
-            chatInput.value = '';
-            adjustTextareaHeight();
-            chatInput.focus();
-        });
+        };
+
+        postData(context)
+            .then(data => {
+                removeLoadingMessage();
+                if (data.status === 'success') {
+                    showAssistantMessage(data.data.response);
+                    loadConversations(); // Mettre à jour la liste des conversations
+                } else {
+                    showErrorMessage(data.message || 'Une erreur est survenue lors de l\'envoi du message.');
+                }
+            })
+            .catch(error => {
+                removeLoadingMessage();
+                console.error('Erreur:', error);
+                showErrorMessage('Une erreur réseau est survenue. Veuillez réessayer.');
+            })
+            .finally(() => {
+                // Réactiver le formulaire
+                chatInput.disabled = false;
+                document.getElementById('send-btn').disabled = false;
+                chatInput.value = '';
+                adjustTextareaHeight();
+                chatInput.focus();
+            });
     }
     
     function openNewChatModal() {
@@ -456,48 +403,43 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemPrompt = document.getElementById('system-prompt').value.trim();
         
         if (!title || !modelId) {
-            alert('Veuillez remplir tous les champs obligatoires.');
+            showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
             return;
         }
         
-        // Désactiver le formulaire pendant l'envoi
         const submitBtn = newChatForm.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Création en cours...';
-        
-        fetch('/api/ai/conversation/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+
+        const context = {
+            service: 'AiConversation',
+            action: 'createConversation',
+            data: {
                 title: title,
                 model_id: modelId,
                 system_prompt: systemPrompt
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Fermer le modal
-                closeAllModals();
-                
-                // Recharger les conversations et ouvrir la nouvelle
-                loadConversations();
-                loadConversation(data.data.conversation_id);
-            } else {
-                alert(data.message || 'Erreur lors de la création de la conversation');
             }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            alert('Une erreur est survenue lors de la création de la conversation');
-        })
-        .finally(() => {
-            // Réactiver le formulaire
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Créer';
-        });
+        };
+        
+        postData(context)
+            .then(data => {
+                if (data.status === 'success') {
+                    closeAllModals();
+                    loadConversations();
+                    loadConversation(data.data.conversation_id);
+                    showNotification('Conversation créée avec succès', 'success');
+                } else {
+                    showNotification(data.message || 'Erreur lors de la création de la conversation', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Une erreur est survenue lors de la création de la conversation', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Créer';
+            });
     }
     
     function openEditTitleModal() {

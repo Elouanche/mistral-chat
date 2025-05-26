@@ -65,25 +65,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function loadPlans() {
-        if (!plansGrid) return;
-        
-        plansLoading.style.display = 'flex';
-        
-        fetch('/api/subscription/plans')
-            .then(response => response.json())
-            .then(data => {
-                plans = data.data || [];
-                renderPlans();
-                plansLoading.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Erreur lors du chargement des plans:', error);
-                plansGrid.innerHTML = '<p class="error-message">Erreur lors du chargement des plans. Veuillez réessayer.</p>';
-                plansLoading.style.display = 'none';
-            });
-    }
-    
     function renderPlans() {
         if (!plansGrid) return;
         
@@ -172,36 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    function loadCurrentSubscription() {
-        if (!currentSubscriptionContent) return;
-        
-        currentSubscriptionLoading.style.display = 'flex';
-        currentSubscriptionContent.style.display = 'none';
-        
-        fetch('/api/subscription/current')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success' && data.data) {
-                    currentSubscription = data.data;
-                    renderCurrentSubscription();
-                } else {
-                    currentSubscriptionContent.innerHTML = `
-                        <div class="no-subscription">
-                            <p>Vous n'avez pas d'abonnement actif. Choisissez un plan ci-dessous pour commencer.</p>
-                        </div>
-                    `;
-                }
-                
-                currentSubscriptionLoading.style.display = 'none';
-                currentSubscriptionContent.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Erreur lors du chargement de l\'abonnement:', error);
-                currentSubscriptionContent.innerHTML = '<p class="error-message">Erreur lors du chargement de votre abonnement. Veuillez réessayer.</p>';
-                currentSubscriptionLoading.style.display = 'none';
-                currentSubscriptionContent.style.display = 'block';
-            });
-    }
     
     function renderCurrentSubscription() {
         if (!currentSubscriptionContent || !currentSubscription) return;
@@ -344,36 +295,122 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function createSubscription(planId) {
-        fetch('/api/subscription/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        const submitBtn = subscribeForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Traitement en cours...';
+
+        const context = {
+            service: 'Subscription',
+            action: 'create',
+            data: {
                 plan_id: planId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Fermer le modal
-                closeAllModals();
-                
-                // Recharger l'abonnement actuel
-                loadCurrentSubscription();
-                
-                // Afficher un message de succès
-                alert('Abonnement créé avec succès!');
-            } else {
-                alert(data.message || 'Erreur lors de la création de l\'abonnement');
             }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            alert('Une erreur est survenue lors de la création de l\'abonnement');
-        })
-        .finally(() => {
-            // Réactiver le formulaire
-            const submitBtn = subscribeForm.querySelector('button[type="submit"]');
-            submitBtn.disabled = false;
-            submit
+        };
+
+        postData(context)
+            .then(data => {
+                if (data.status === 'success') {
+                    closeAllModals();
+                    loadCurrentSubscription();
+                    alert('Abonnement créé avec succès!');
+                } else {
+                    alert(data.message || 'Erreur lors de la création de l\'abonnement');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue lors de la création de l\'abonnement');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirmer l\'abonnement';
+            });
+    }
+
+    function handleCancelSubscription() {
+        const context = {
+            service: 'Subscription',
+            action: 'cancel',
+            data: {
+                subscription_id: currentSubscription.id
+            }
+        };
+
+        postData(context)
+            .then(data => {
+                if (data.status === 'success') {
+                    closeAllModals();
+                    loadCurrentSubscription();
+                    alert('Abonnement annulé avec succès');
+                } else {
+                    alert(data.message || 'Erreur lors de l\'annulation de l\'abonnement');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue lors de l\'annulation de l\'abonnement');
+            });
+    }
+
+    function loadCurrentSubscription() {
+        if (!currentSubscriptionContent) return;
+
+        currentSubscriptionLoading.style.display = 'flex';
+        currentSubscriptionContent.style.display = 'none';
+
+        const context = {
+            service: 'Subscription',
+            action: 'getCurrent'
+        };
+
+        postData(context)
+            .then(data => {
+                if (data.status === 'success' && data.data) {
+                    currentSubscription = data.data;
+                    renderCurrentSubscription();
+                } else {
+                    currentSubscriptionContent.innerHTML = `
+                        <div class="no-subscription">
+                            <p>Vous n'avez pas d'abonnement actif. Choisissez un plan ci-dessous pour commencer.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                currentSubscriptionContent.innerHTML = '<p class="error-message">Erreur lors du chargement de votre abonnement. Veuillez réessayer.</p>';
+            })
+            .finally(() => {
+                currentSubscriptionLoading.style.display = 'none';
+                currentSubscriptionContent.style.display = 'block';
+            });
+    }
+
+    function loadPlans() {
+        if (!plansGrid) return;
+        
+        plansLoading.style.display = 'flex';
+
+        const context = {
+            service: 'Subscription',
+            action: 'getPlans'
+        };
+        
+        postData(context)
+            .then(data => {
+                if (data.status === 'success') {
+                    plans = data.data || [];
+                    renderPlans();
+                } else {
+                    plansGrid.innerHTML = '<p class="error-message">Erreur lors du chargement des plans. Veuillez réessayer.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                plansGrid.innerHTML = '<p class="error-message">Erreur lors du chargement des plans. Veuillez réessayer.</p>';
+            })
+            .finally(() => {
+                plansLoading.style.display = 'none';
+            });
+    }
+});
