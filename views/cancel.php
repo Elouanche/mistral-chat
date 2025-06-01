@@ -1,5 +1,6 @@
 <?php 
 
+require_once SHARED_PATH . 'userAcces.php';
 
 // Récupérer l'ID de commande
 $orderId = $_GET['order_id'] ?? null;

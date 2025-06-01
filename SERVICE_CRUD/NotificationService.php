@@ -1,25 +1,25 @@
 <?php
-require_once CRUD_PATH . '/NotificationsCRUD.php';
+require_once CRUD_PATH . 'NotificationsCRUD.php';
 
-require_once CRUD_PATH . '/OrdersCRUD.php';
-require_once BASE_PATH . '/vendor/autoload.php';
-require_once CRUD_PATH . '/BaseCRUD.php';
-require_once CRUD_PATH . '/UsersCRUD.php';
-require_once CRUD_PATH . '/ProductsCRUD.php';
-require_once CRUD_PATH . '/ProductsImageCRUD.php';
-require_once CRUD_PATH . '/ReviewsCRUD.php';
-require_once CRUD_PATH . '/ReviewResponsesCRUD.php';
-require_once CRUD_PATH . '/OrdersCRUD.php';
-require_once CRUD_PATH . '/OrderItemsCRUD.php';
-require_once CRUD_PATH . '/CartCRUD.php';
-require_once CRUD_PATH . '/CartItemsCRUD.php';
-require_once CRUD_PATH . '/PaymentsCRUD.php';
-require_once CRUD_PATH . '/DeliveriesCRUD.php';
-require_once CRUD_PATH . '/ReturnedsCRUD.php';
-require_once CRUD_PATH . '/AnalyticsCRUD.php';
-require_once CRUD_PATH . '/NotificationsCRUD.php';
-require_once CRUD_PATH . '/MonitoringCRUD.php';
-require_once CRUD_PATH . '/ErrorLogsCRUD.php';
+require_once CRUD_PATH . 'OrdersCRUD.php';
+require_once BASE_PATH . 'vendor/autoload.php';
+require_once CRUD_PATH . 'BaseCRUD.php';
+require_once CRUD_PATH . 'UsersCRUD.php';
+require_once CRUD_PATH . 'ProductsCRUD.php';
+require_once CRUD_PATH . 'ProductsImageCRUD.php';
+require_once CRUD_PATH . 'ReviewsCRUD.php';
+require_once CRUD_PATH . 'ReviewResponsesCRUD.php';
+require_once CRUD_PATH . 'OrdersCRUD.php';
+require_once CRUD_PATH . 'OrderItemsCRUD.php';
+require_once CRUD_PATH . 'CartCRUD.php';
+require_once CRUD_PATH . 'CartItemsCRUD.php';
+require_once CRUD_PATH . 'PaymentsCRUD.php';
+require_once CRUD_PATH . 'DeliveriesCRUD.php';
+require_once CRUD_PATH . 'ReturnedsCRUD.php';
+require_once CRUD_PATH . 'AnalyticsCRUD.php';
+require_once CRUD_PATH . 'NotificationsCRUD.php';
+require_once CRUD_PATH . 'MonitoringCRUD.php';
+require_once CRUD_PATH . 'ErrorLogsCRUD.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
@@ -57,7 +57,7 @@ class NotificationService {
      */
     private function initializeMailer() {
        
-            require_once BASE_PATH . '/env_helper.php';
+            require_once BASE_PATH . 'env_helper.php';
             
             $this->mailer = new PHPMailer(true);
             $this->mailer->isSMTP();
@@ -119,7 +119,7 @@ class NotificationService {
             'shipping_country' => $shipping['shipping_country'] ?? null
         ];
 
-        require_once BASE_PATH . '/env_helper.php';
+        require_once BASE_PATH . 'env_helper.php';
 
         if (isset($data['order_id'])) {
             // Récupération des détails de la commande

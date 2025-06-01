@@ -356,3 +356,26 @@ CREATE TABLE IF NOT EXISTS api_logs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (request_id) REFERENCES ai_requests(id) ON DELETE SET NULL
 ) ENGINE = InnoDB;
+
+
+CREATE TABLE IF NOT EXISTS subscription_plans (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    max_conversations INT NOT NULL DEFAULT 3,
+    max_messages_per_day INT NOT NULL DEFAULT 50,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    plan_id INT NOT NULL,
+    status ENUM('active', 'cancelled', 'expired') NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL,
+    FOREIGN KEY (plan_id) REFERENCES subscription_plans(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);

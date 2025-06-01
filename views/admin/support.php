@@ -111,7 +111,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 </main>
 
 
-<link rel="stylesheet"  href="<?= htmlspecialchars(STATIC_URL); ?>css/admin-support.css" ></link>
+<link rel="stylesheet"  href="<?= htmlspecialchars(STATIC_URL); ?>css/page-admin-support.css" ></link>
 <script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-support.js" defer></script>
 
 <?php require_once COMPONENT_PATH . "foot.php"; ?>

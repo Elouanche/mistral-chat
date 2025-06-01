@@ -1,129 +1,14 @@
+@import 'variables.css';
+
 :root {
-    /* Couleurs de base */
-    --color-1: #66b5ff; /* Ancien jaune vif remplacé par un bleu accent plus doux */
-    --color-black: #0d0d0d; /* Noir très foncé (scrim/inverted) */
-    --color-white: #ffffff; /* Blanc (inchangé) */
-    --color-gray-100: #f3f3f3; /* Ancien gris clair */
-    --color-gray-200: #cdcdcd; /* Gris moyen */
-    --color-gray-300: #afafaf; /* Gris plus sombre */
-    --color-gray-800: #303030; /* Background secondaire */
-    --color-gray-900: #212121; /* Background principal */
-    --color-accent: #e02e2a; /* Ancien rouge vif → danger primaire */
-
-    /* Couleurs sémantiques */
-    --color-text: var(--text-primary); /* Blanc */
-    --color-text-secondary: var(--text-secondary); /* f3f3f3 */
-    --color-text-muted: var(--text-tertiary); /* afafaf */
-    --color-background: var(--bg-secondary); /* 303030 */
-    --color-background-alt: var(--bg-primary); /* 212121 */
-    --color-border: var(--border-default); /* blanc avec opacité */
-    --color-highlight: var(--text-accent); /* 66b5ff */
-
-    /* Dimensions et espacements */
+    /* Dimensions et espacements spécifiques */
     --footer-padding: 20px 0;
     --footer-text-size: 16px;
     --footer-copy-size: 14px;
-
-    /* Couleurs utiles */
-    --color-success: #17b93d; /* Non spécifié dans ton nouveau jeu, gardé tel quel */
-    --color-warning: var(--text-status-warning); /* ff9e6c */
-    --color-danger: var(--interactive-bg-danger-primary-default); /* e02e2a */
     
-    /* Typography */
-    --font-primary: 'Poppins', system-ui, -apple-system, sans-serif;
-    
-    /* Tailles de police avec échelle cohérente */
-    --font-size-base: 18px;      /* Base size */
-    --scale-ratio: 1.25;         /* Échelle typographique */
-    --font-size-xs: calc(var(--font-size-base) / var(--scale-ratio));
-    --font-size-sm: var(--font-size-base);
-    --font-size-md: calc(var(--font-size-base) * var(--scale-ratio));
-    --font-size-lg: calc(var(--font-size-md) * var(--scale-ratio));
-    --font-size-xl: calc(var(--font-size-lg) * var(--scale-ratio));
-    --font-size-2xl: calc(var(--font-size-xl) * var(--scale-ratio));
-    
-    /* Line heights */
-    --line-height-tight: 1.2;
-    --line-height-base: 1.6;
-    --line-height-loose: 2;
-    
-    /* Font weights */
-    --font-weight-light: 200;
-    --font-weight-normal: 400;
-    --font-weight-bold: 600;
-    
-    /* Spacing - système d'échelle cohérent */
-    /* Petits espacements (ex: marges de texte, padding internes) */
-    --spacing-unit: 0.5rem;
-    --spacing-xs: calc(var(--spacing-sm) / var(--scale-ratio));
-    --spacing-sm: var(--spacing-unit);
-    --spacing-md: calc(var(--spacing-sm) * var(--scale-ratio));
-    --spacing-lg: calc(var(--spacing-md) * var(--scale-ratio));
-    --spacing-xl: calc(var(--spacing-lg) * var(--scale-ratio));
-    --spacing-2xl: calc(var(--spacing-xl) * var(--scale-ratio));
-
-    /* Grands espacements (ex: sections, gros blocs) */
-    --spacing-block-unit: 6rem;
-    --spacing-block-xs: calc(var(--spacing-block-sm) / var(--scale-ratio));
-    --spacing-block-sm: var(--spacing-block-unit);
-    --spacing-block-md: calc(var(--spacing-block-sm) * var(--scale-ratio));
-    --spacing-block-lg: calc(var(--spacing-block-md) * var(--scale-ratio));
-    --spacing-block-xl: calc(var(--spacing-block-lg) * var(--scale-ratio));
-    --spacing-block-2xl: calc(var(--spacing-block-xl) * var(--scale-ratio));
-
-    /* Border radius */
-    --radius-unit: 4px;
-    --radius-sm: var(--radius-unit);
-    --radius-md: calc(var(--radius-unit) * 2);
-    --radius-lg: calc(var(--radius-unit) * 4);
-    --radius-full: 9999px;
-    
-    /* Transitions */
-    --duration-fast: 0.2s;
-    --duration-normal: 0.3s;
-    --duration-slow: 0.5s;
-    --duration-super-slow: 2s;
-    --timing-function: ease;
-    --transition-base: all var(--duration-normal) var(--timing-function);
-    --transition-fast: all var(--duration-fast) var(--timing-function);
-    --transition-slow: all var(--duration-slow) var(--timing-function);
-    --transition-super-slow: all var(--duration-super-slow) var(--timing-function);
-    
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.20);
-    
-    /* Z-index */
-    --z-negative: -1;
-    --z-normal: 1;
+    /* Valeurs spécifiques à ce fichier qui ne sont pas dans variables.css */
     --z-optionel-2: 2;
     --z-optionel-3: 3;
-    --z-header: 100;
-    --z-dropdown: 200;
-    --z-sticky: 300;
-    --z-modal: 400;
-    --z-overlay: 500;
-    --z-tooltip: 600;
-    
-    /* Layout */
-    --container-padding: var(--spacing-md);
-    --container-max-width: 1200px;
-    --content-max-width: 800px;
-    
-    /* Components */
-    --header-height: 60px;
-    --header-height-mobile: 50px;
-    --button-padding: var(--spacing-sm) var(--spacing-md);
-    --input-height: 2.5rem;
-    --input-padding: var(--spacing-sm);
-    
-    /* Breakpoints */
-    --breakpoint-xs: 480px;
-    --breakpoint-sm: 600px;
-    --breakpoint-md: 768px;
-    --breakpoint-lg: 1024px;
-    --breakpoint-xl: 1280px;
 }
 
 /* Media queries pour les ajustements responsifs des variables */
@@ -291,7 +176,7 @@ h6 { font-size: var(--font-size-xs);  margin-bottom: var(--spacing-xs); color: v
 
 p, ul, ol {
     margin-bottom: var(--spacing-md);
-    color: var(--color-text);
+    color: inherit;
     list-style: none;
 }
 
@@ -547,7 +432,7 @@ input:focus, textarea:focus, select:focus {
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: 20px;
     background-color: transparent;
-    color: var(--color-white);
+    color: var(--color-black);
     border: 1px solid var(--color-white);
     font-weight: var(--font-weight-normal);
     cursor: pointer;
@@ -907,14 +792,14 @@ input:focus, textarea:focus, select:focus {
 .bottom-auto { bottom: auto; }
 .left-auto { left: auto; }
 
-/* Z-index */
-.z-0 { z-index: 0; }
-.z-10 { z-index: 10; }
-.z-20 { z-index: 20; }
-.z-30 { z-index: 30; }
-.z-40 { z-index: 40; }
-.z-50 { z-index: 50; }
-.z-auto { z-index: auto; }
+ /* Z-index */
+    --z-0 { z-index: 0; }
+    --z-10 { z-index: 10; }
+    --z-20 { z-index: 20; }
+    --z-30 { z-index: 30; }
+    --z-40 { z-index: 40; }
+    --z-50 { z-index: 50; }
+    --z-auto { z-index: auto; }
 
 
 /* Display */
@@ -940,7 +825,7 @@ input:focus, textarea:focus, select:focus {
 .footer {
     width: 100%;
     background-color: var(--color-black);
-    color: var(--color-text);
+    color: var(--color-text-secondary);
     padding-top: var(--footer-padding);
     text-align: center;
     font-size: var(--footer-text-size);

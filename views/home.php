@@ -1,9 +1,14 @@
 
+<?php
+
+require_once SHARED_PATH . 'session.php';
+
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php require_once COMPONENT_PATH . 'head.php'; ?>
-    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/home.css">
+    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/page-home.css">
     <title>Mistral Chat - IA Conversationnelle</title>
 </head>
 

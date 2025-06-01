@@ -1,14 +1,14 @@
 <?php
-require_once CRUD_PATH . '/SubscriptionsCRUD.php';
-require_once CRUD_PATH . '/SubscriptionPlansCRUD.php';
-require_once CRUD_PATH . '/ApiUsageCRUD.php';
+require_once CRUD_PATH . 'UserSubscriptionsCRUD.php';
+require_once CRUD_PATH . 'SubscriptionPlansCRUD.php';
+require_once CRUD_PATH . 'ApiUsageCRUD.php';
 
 /**
  * Service pour la gestion des abonnements
  */
 class SubscriptionService {
-    /** @var SubscriptionsCRUD $subscriptionsCRUD Instance du CRUD pour les abonnements */
-    private $subscriptionsCRUD;
+    /** @var UserSubscriptionsCRUD $userSubscriptionsCRUD Instance du CRUD pour les abonnements utilisateurs */
+    private $userSubscriptionsCRUD;
     
     /** @var SubscriptionPlansCRUD $plansCRUD Instance du CRUD pour les plans d'abonnement */
     private $plansCRUD;
@@ -22,7 +22,7 @@ class SubscriptionService {
      * @param mysqli $mysqli Instance de connexion mysqli
      */
     public function __construct($mysqli) {
-        $this->subscriptionsCRUD = new SubscriptionsCRUD($mysqli);
+        $this->userSubscriptionsCRUD = new UserSubscriptionsCRUD($mysqli);
         $this->plansCRUD = new SubscriptionPlansCRUD($mysqli);
         $this->usageCRUD = new ApiUsageCRUD($mysqli);
         logInfo("SubscriptionService initialized");
@@ -30,12 +30,10 @@ class SubscriptionService {
     
     /**
      * Récupère tous les plans d'abonnement actifs
-     * 
-     * @return array Résultat de l'opération
      */
-    public function getAvailablePlans() {
+    public function getAvailablePlans($data) {
         try {
-            $plans = $this->plansCRUD->getActivePlans();
+            $plans = $this->plansCRUD->get(['*'], ['is_active' => 1]);
             
             return [
                 'status' => 'success',
@@ -52,13 +50,9 @@ class SubscriptionService {
     
     /**
      * Récupère l'abonnement actif d'un utilisateur
-     * 
-     * @param array $data Données avec l'ID de l'utilisateur
-     * @return array Résultat de l'opération
      */
     public function getUserSubscription($data) {
         try {
-            // Vérifier les champs obligatoires
             if (!isset($data['user_id'])) {
                 return [
                     'status' => 'error',
@@ -66,9 +60,14 @@ class SubscriptionService {
                 ];
             }
             
-            $subscription = $this->subscriptionsCRUD->getActiveSubscription($data['user_id']);
+            // Récupérer l'abonnement actif
+            $subscriptions = $this->userSubscriptionsCRUD->get(['*'], [
+                'user_id' => $data['user_id'],
+                'status' => 'active',
+                'expires_at > NOW()' => null
+            ]);
             
-            if (!$subscription) {
+            if (empty($subscriptions)) {
                 return [
                     'status' => 'success',
                     'data' => null,
@@ -76,19 +75,31 @@ class SubscriptionService {
                 ];
             }
             
+            $subscription = $subscriptions[0];
+            
             // Récupérer les détails du plan
-            $plan = $this->plansCRUD->getPlan($subscription['plan_id']);
+            $plan = $this->plansCRUD->find($subscription['plan_id']);
             $subscription['plan'] = $plan;
             
-            // Récupérer l'utilisation actuelle
+            // Calculer l'utilisation des tokens
             $currentMonth = date('Y-m-01');
             $nextMonth = date('Y-m-01', strtotime('+1 month'));
-            $usage = $this->usageCRUD->getUserTokensUsedInPeriod($data['user_id'], $currentMonth, $nextMonth);
+            
+            $usage = $this->usageCRUD->get(
+                ['SUM(input_tokens + output_tokens) as total_tokens'],
+                [
+                    'user_id' => $data['user_id'],
+                    'usage_date >=' => $currentMonth,
+                    'usage_date <' => $nextMonth
+                ]
+            );
+            
+            $tokensUsed = !empty($usage) ? (int)$usage[0]['total_tokens'] : 0;
             
             $subscription['usage'] = [
-                'tokens_used' => $usage,
+                'tokens_used' => $tokensUsed,
                 'tokens_limit' => $plan['token_limit'],
-                'tokens_remaining' => max(0, $plan['token_limit'] - $usage)
+                'tokens_remaining' => max(0, $plan['token_limit'] - $tokensUsed)
             ];
             
             return [
@@ -96,7 +107,7 @@ class SubscriptionService {
                 'data' => $subscription
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la récupération de l'abonnement", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            logError("Erreur lors de la récupération de l'abonnement", ['error' => $e->getMessage()]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la récupération de l'abonnement"
@@ -106,13 +117,9 @@ class SubscriptionService {
     
     /**
      * Crée un nouvel abonnement
-     * 
-     * @param array $data Données de l'abonnement
-     * @return array Résultat de l'opération
      */
     public function createSubscription($data) {
         try {
-            // Vérifier les champs obligatoires
             if (!isset($data['user_id']) || !isset($data['plan_id'])) {
                 return [
                     'status' => 'error',
@@ -121,7 +128,7 @@ class SubscriptionService {
             }
             
             // Vérifier si le plan existe et est actif
-            $plan = $this->plansCRUD->getPlan($data['plan_id']);
+            $plan = $this->plansCRUD->find($data['plan_id']);
             if (!$plan || !$plan['is_active']) {
                 return [
                     'status' => 'error',
@@ -129,47 +136,39 @@ class SubscriptionService {
                 ];
             }
             
-            // Vérifier si l'utilisateur a déjà un abonnement actif
-            $existingSubscription = $this->subscriptionsCRUD->getActiveSubscription($data['user_id']);
-            if ($existingSubscription) {
-                // Annuler l'abonnement existant
-                $this->subscriptionsCRUD->cancelSubscription($existingSubscription['id']);
-            }
-            
-            // Calculer les dates de début et de fin
-            $startDate = $data['start_date'] ?? date('Y-m-d');
-            $endDate = date('Y-m-d', strtotime($startDate . ' + ' . $plan['duration_days'] . ' days'));
+            // Désactiver les abonnements existants
+            $this->userSubscriptionsCRUD->update(
+                ['status' => 'cancelled'],
+                [
+                    'user_id' => $data['user_id'],
+                    'status' => 'active'
+                ]
+            );
             
             // Créer le nouvel abonnement
-            $subscriptionData = [
+            $startedAt = date('Y-m-d H:i:s');
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $plan['duration_days'] . ' days'));
+            
+            $subscriptionId = $this->userSubscriptionsCRUD->insert([
                 'user_id' => $data['user_id'],
                 'plan_id' => $data['plan_id'],
                 'status' => 'active',
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ];
-            
-            $subscriptionId = $this->subscriptionsCRUD->createSubscription($subscriptionData);
-            
-            if (!$subscriptionId) {
-                return [
-                    'status' => 'error',
-                    'message' => "Erreur lors de la création de l'abonnement"
-                ];
-            }
+                'started_at' => $startedAt,
+                'expires_at' => $expiresAt
+            ]);
             
             return [
                 'status' => 'success',
                 'data' => [
                     'subscription_id' => $subscriptionId,
-                    'start_date' => $startDate,
-                    'end_date' => $endDate,
+                    'started_at' => $startedAt,
+                    'expires_at' => $expiresAt,
                     'plan' => $plan
                 ],
                 'message' => "Abonnement créé avec succès"
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la création de l'abonnement", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            logError("Erreur lors de la création de l'abonnement", ['error' => $e->getMessage()]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la création de l'abonnement"
@@ -179,13 +178,9 @@ class SubscriptionService {
     
     /**
      * Annule un abonnement
-     * 
-     * @param array $data Données avec l'ID de l'abonnement et l'ID de l'utilisateur
-     * @return array Résultat de l'opération
      */
     public function cancelSubscription($data) {
         try {
-            // Vérifier les champs obligatoires
             if (!isset($data['subscription_id']) || !isset($data['user_id'])) {
                 return [
                     'status' => 'error',
@@ -193,7 +188,13 @@ class SubscriptionService {
                 ];
             }
             
-            $result = $this->subscriptionsCRUD->cancelSubscription($data['subscription_id'], $data['user_id']);
+            $result = $this->userSubscriptionsCRUD->update(
+                ['status' => 'cancelled'],
+                [
+                    'id' => $data['subscription_id'],
+                    'user_id' => $data['user_id']
+                ]
+            );
             
             if (!$result) {
                 return [
@@ -207,98 +208,63 @@ class SubscriptionService {
                 'message' => "Abonnement annulé avec succès"
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de l'annulation de l'abonnement", ['error' => $e->getMessage(), 'subscription_id' => $data['subscription_id'] ?? null]);
+            logError("Erreur lors de l'annulation de l'abonnement", ['error' => $e->getMessage()]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de l'annulation de l'abonnement"
             ];
         }
     }
-    
+
     /**
      * Vérifie si un utilisateur peut utiliser un modèle spécifique
-     * 
-     * @param int $userId ID de l'utilisateur
-     * @param string $modelName Nom du modèle
-     * @return bool True si l'utilisateur peut utiliser le modèle, sinon False
      */
     public function canUserUseModel($userId, $modelName) {
-        $subscription = $this->subscriptionsCRUD->getActiveSubscription($userId);
-        if (!$subscription) {
-            // Si pas d'abonnement, vérifier si le modèle est disponible dans le plan gratuit
-            $freePlans = $this->plansCRUD->get(['*'], ['price' => 0, 'is_active' => true]);
-            if (empty($freePlans)) {
-                return false;
-            }
+        // Récupérer l'abonnement actif
+        $subscriptions = $this->userSubscriptionsCRUD->get(['*'], [
+            'user_id' => $userId,
+            'status' => 'active',
+            'expires_at > NOW()' => null
+        ]);
+
+        if (empty($subscriptions)) {
+            // Vérifier le plan gratuit
+            $freePlans = $this->plansCRUD->get(['*'], [
+                'price' => 0,
+                'is_active' => 1
+            ]);
             
-            return $this->plansCRUD->isModelAvailableForPlan($freePlans[0]['id'], $modelName);
+            if (empty($freePlans)) return false;
+            
+            // Vérifier si le modèle est disponible dans le plan gratuit
+           $planModels = $this->plansCRUD->get(
+                ['subscription_plans.*', 'plan_models.model_name'],
+                [
+                    'subscription_plans.id' => $freePlans[0]['id'],
+                    'plan_models.model_name' => $modelName
+                ],
+                [
+                    'joins' => [
+                        [
+                            'table' => 'plan_models',
+                            'type' => 'INNER',
+                            'conditions' => ['subscription_plans.id = plan_models.plan_id']
+                        ]
+                    ]
+                ]
+            );
+            
+            return !empty($planModels);
         }
+
+        // Vérifier si le modèle est disponible dans le plan actif
+        $planModels = $this->plansCRUD->get(['*'], [
+            'plan_id' => $subscriptions[0]['plan_id'],
+            'model_name' => $modelName
+        ], ['joins' => [
+            ['table' => 'plan_models', 'on' => 'subscription_plans.id = plan_models.plan_id']
+        ]]);
         
-        return $this->plansCRUD->isModelAvailableForPlan($subscription['plan_id'], $modelName);
-    }
-    
-    /**
-     * Vérifie si un utilisateur a dépassé sa limite de tokens
-     * 
-     * @param int $userId ID de l'utilisateur
-     * @return bool True si l'utilisateur a dépassé sa limite, sinon False
-     */
-    public function hasUserExceededTokenLimit($userId) {
-        $subscription = $this->subscriptionsCRUD->getActiveSubscription($userId);
-        if (!$subscription) {
-            // Si pas d'abonnement, vérifier la limite du plan gratuit
-            $freePlans = $this->plansCRUD->get(['*'], ['price' => 0, 'is_active' => true]);
-            if (empty($freePlans)) {
-                return true; // Pas de plan gratuit, donc limite dépassée
-            }
-            
-            $tokenLimit = $freePlans[0]['token_limit'];
-        } else {
-            $tokenLimit = $this->plansCRUD->getPlanTokenLimit($subscription['plan_id']);
-        }
-        
-        // Récupérer l'utilisation actuelle
-        $currentMonth = date('Y-m-01');
-        $nextMonth = date('Y-m-01', strtotime('+1 month'));
-        $tokensUsed = $this->usageCRUD->getUserTokensUsedInPeriod($userId, $currentMonth, $nextMonth);
-        
-        return $tokensUsed >= $tokenLimit;
-    }
-    
-    /**
-     * Récupère l'historique des abonnements d'un utilisateur
-     * 
-     * @param array $data Données avec l'ID de l'utilisateur
-     * @return array Résultat de l'opération
-     */
-    public function getUserSubscriptionHistory($data) {
-        try {
-            // Vérifier les champs obligatoires
-            if (!isset($data['user_id'])) {
-                return [
-                    'status' => 'error',
-                    'message' => "L'ID de l'utilisateur est obligatoire"
-                ];
-            }
-            
-            $subscriptions = $this->subscriptionsCRUD->getUserSubscriptions($data['user_id']);
-            
-            // Ajouter les détails du plan pour chaque abonnement
-            foreach ($subscriptions as &$subscription) {
-                $plan = $this->plansCRUD->getPlan($subscription['plan_id']);
-                $subscription['plan'] = $plan;
-            }
-            
-            return [
-                'status' => 'success',
-                'data' => $subscriptions
-            ];
-        } catch (Exception $e) {
-            logError("Erreur lors de la récupération de l'historique des abonnements", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
-            return [
-                'status' => 'error',
-                'message' => "Erreur lors de la récupération de l'historique des abonnements"
-            ];
-        }
+        return !empty($planModels);
     }
 }

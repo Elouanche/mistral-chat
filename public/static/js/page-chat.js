@@ -124,15 +124,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        models.forEach(model => {
-            const modelCard = document.createElement('div');
-            modelCard.className = 'model-card';
-            modelCard.innerHTML = `
-                <h4>${model.display_name}</h4>
+        const modelCardsHTML = models.map(model => `
+            <div class="model-card">
+                <h4>${model.model_name}</h4>
                 <p>${model.description || 'Aucune description disponible'}</p>
-            `;
-            modelsGrid.appendChild(modelCard);
-        });
+            </div>
+        `).join('');
+        
+        modelsGrid.innerHTML = modelCardsHTML;
     }
     
     function populateModelSelect() {

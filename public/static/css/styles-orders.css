@@ -1,3 +1,5 @@
+@import 'variables.css';
+
 :root {
     --table-header-bg: var(--color-gray-900);
     --table-row-hover: var(--color-gray-800);

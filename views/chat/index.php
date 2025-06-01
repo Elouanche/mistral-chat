@@ -1,9 +1,12 @@
 
+<?php
+require_once SHARED_PATH . 'userAcces.php';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php require_once COMPONENT_PATH . 'head.php'; ?>
-    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/chat.css">
+    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/page-chat.css">
     <title>Mistral Chat - Conversations</title>
 </head>
 
@@ -168,8 +171,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
-    <script src="<?php echo STATIC_URL; ?>js/chat.js"></script>
+    <script src="<?php echo STATIC_URL; ?>js/page-chat.js"></script>
     
-    <?php require_once COMPONENT_PATH . 'footer.php'; ?>
-</body>
-</html>
+<?php require_once COMPONENT_PATH . 'foot.php'; ?>

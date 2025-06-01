@@ -1,7 +1,9 @@
 <?php
-require_once CRUD_PATH . '/AiConversationsCRUD.php';
-require_once CRUD_PATH . '/AiMessagesCRUD.php';
-require_once CRUD_PATH . '/AiModelsCRUD.php';
+require_once CRUD_PATH . 'AiConversationsCRUD.php';
+require_once CRUD_PATH . 'AiMessagesCRUD.php';
+require_once CRUD_PATH . 'AiModelsCRUD.php';
+require_once CRUD_PATH . 'SubscriptionPlansCRUD.php';
+require_once CRUD_PATH . 'UserSubscriptionsCRUD.php';
 
 /**
  * Service pour la gestion des conversations avec l'IA
@@ -16,6 +18,12 @@ class AiConversationService {
     /** @var AiModelsCRUD $modelsCRUD Instance du CRUD pour les modèles */
     private $modelsCRUD;
     
+    /** @var SubscriptionPlansCRUD */
+    private $subscriptionPlansCRUD;
+    
+    /** @var UserSubscriptionsCRUD */
+    private $userSubscriptionsCRUD;
+    
     /**
      * Constructeur
      * 
@@ -25,6 +33,8 @@ class AiConversationService {
         $this->conversationsCRUD = new AiConversationsCRUD($mysqli);
         $this->messagesCRUD = new AiMessagesCRUD($mysqli);
         $this->modelsCRUD = new AiModelsCRUD($mysqli);
+        $this->subscriptionPlansCRUD = new SubscriptionPlansCRUD($mysqli);
+        $this->userSubscriptionsCRUD = new UserSubscriptionsCRUD($mysqli);
     }
     
     /**
@@ -57,7 +67,12 @@ class AiConversationService {
             
             // Ajouter le dernier message pour chaque conversation
             foreach ($conversations as &$conversation) {
-                $lastMessage = $this->messagesCRUD->getLastMessage($conversation['id']);
+                $lastMessage = $this->messagesCRUD->get(['*'], 
+                ['conversation_id' => $conversation['id']], 
+                ['order_by' => ['created_at' => 'DESC'], 'limit' => 1]
+            );
+            $lastMessage = !empty($lastMessage) ? $lastMessage[0] : null;
+
                 $conversation['last_message'] = $lastMessage;
                 
                 // Compter le nombre de messages
@@ -156,6 +171,14 @@ class AiConversationService {
      */
     public function createConversation($data) {
         try {
+            // Vérifier les limites avant de créer
+            if (isset($data['user_id'])) {
+                $limitCheck = $this->checkConversationLimits($data['user_id']);
+                if ($limitCheck['status'] === 'error') {
+                    return $limitCheck;
+                }
+            }
+
             // Vérifier les champs obligatoires
             if (!isset($data['user_id']) || !isset($data['model_id'])) {
                 return [
@@ -200,7 +223,7 @@ class AiConversationService {
                     'content' => $data['system_prompt']
                 ];
                 
-                $this->messagesCRUD->addMessage($systemMessage);
+                $this->messagesCRUD->insert($systemMessage);
             }
             
             return [
@@ -260,7 +283,11 @@ class AiConversationService {
                 
                 foreach ($messages as $message) {
                     if ($message['role'] === 'system') {
-                        $this->messagesCRUD->updateMessage($message['id'], ['content' => $data['system_prompt']]);
+                        // Utiliser la méthode update du BaseCRUD
+                        $this->messagesCRUD->update(
+                            ['content' => $data['system_prompt']], // données à mettre à jour
+                            ['id' => $message['id']] // condition where
+                        );
                         $systemMessageExists = true;
                         break;
                     }
@@ -273,7 +300,7 @@ class AiConversationService {
                         'content' => $data['system_prompt']
                     ];
                     
-                    $this->messagesCRUD->addMessage($systemMessage);
+                    $this->messagesCRUD->insert($systemMessage);
                 }
             }
             
@@ -331,9 +358,16 @@ class AiConversationService {
             $userId = $data['user_id'] ?? null;
             $archive = isset($data['archive']) ? (bool)$data['archive'] : true;
             
-            // Archiver/désarchiver la conversation
-            $success = $this->conversationsCRUD->archiveConversation($data['conversation_id'], $archive, $userId);
-            
+           // Archiver/désarchiver la conversation
+            $updateData = ['is_archived' => $archive ? 1 : 0];
+            $conditions = ['id' => $data['conversation_id']];
+
+            // Ajouter la condition user_id si fourni
+            if ($userId !== null) {
+                $conditions['user_id'] = $userId;
+            }
+
+            $success = $this->conversationsCRUD->update($updateData, $conditions);
             if (!$success) {
                 return [
                     'status' => 'error',
@@ -371,12 +405,15 @@ class AiConversationService {
             }
             
             $userId = $data['user_id'] ?? null;
-            
             // Supprimer d'abord tous les messages de la conversation
-            $this->messagesCRUD->deleteConversationMessages($data['conversation_id']);
-            
+            $this->messagesCRUD->delete(['conversation_id' => $data['conversation_id']]);
+
             // Supprimer la conversation
-            $success = $this->conversationsCRUD->deleteConversation($data['conversation_id'], $userId);
+            $conditions = ['id' => $data['conversation_id']];
+            if ($userId !== null) {
+                $conditions['user_id'] = $userId;
+            }
+            $success = $this->conversationsCRUD->delete($conditions);
             
             if (!$success) {
                 return [
@@ -394,6 +431,127 @@ class AiConversationService {
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la suppression de la conversation"
+            ];
+        }
+    }
+    
+    /**
+     * Vérifie si l'utilisateur peut créer une nouvelle conversation
+     * 
+     * @param int $userId ID de l'utilisateur
+     * @return array Statut de la vérification
+     */
+    private function checkConversationLimits($userId) {
+        try {
+            // Récupérer l'abonnement actif de l'utilisateur
+            $userSub = $this->userSubscriptionsCRUD->get(['plan_id'], [
+                'user_id' => $userId,
+                'status' => 'active',
+                'expires_at > NOW()' => null
+            ]);
+
+            if (empty($userSub)) {
+                // Plan gratuit par défaut
+                $planId = 1; // ID du plan gratuit
+            } else {
+                $planId = $userSub[0]['plan_id'];
+            }
+
+            // Récupérer les limites du plan
+            $plan = $this->subscriptionPlansCRUD->get(['*'], ['id' => $planId]);
+            
+            if (empty($plan)) {
+                return [
+                    'status' => 'error',
+                    'message' => 'Plan non trouvé'
+                ];
+            }
+
+            $plan = $plan[0];
+            
+            // Compter les conversations actives de l'utilisateur
+            $activeConversations = $this->conversationsCRUD->count([
+                'user_id' => $userId,
+                'is_archived' => 0
+            ]);
+
+            if ($activeConversations >= $plan['max_conversations']) {
+                return [
+                    'status' => 'error',
+                    'message' => 'Limite de conversations atteinte pour votre plan',
+                    'data' => [
+                        'current_count' => $activeConversations,
+                        'max_allowed' => $plan['max_conversations']
+                    ]
+                ];
+            }
+
+            return [
+                'status' => 'success',
+                'data' => [
+                    'can_create' => true,
+                    'current_count' => $activeConversations,
+                    'max_allowed' => $plan['max_conversations']
+                ]
+            ];
+        } catch (Exception $e) {
+            logError("Erreur lors de la vérification des limites", ['error' => $e->getMessage()]);
+            return [
+                'status' => 'error',
+                'message' => "Erreur lors de la vérification des limites"
+            ];
+        }
+    }
+
+    /**
+     * Récupère les informations sur l'utilisation et les limites
+     */
+    public function getUsageStats($data) {
+        try {
+            if (!isset($data['user_id'])) {
+                return [
+                    'status' => 'error',
+                    'message' => "L'ID de l'utilisateur est obligatoire"
+                ];
+            }
+
+            $userId = $data['user_id'];
+
+            // Récupérer le plan actuel
+            $userSub = $this->userSubscriptionsCRUD->get(
+                ['plan_id', 'expires_at'], 
+                ['user_id' => $userId, 'status' => 'active']
+            );
+
+            $planId = empty($userSub) ? 1 : $userSub[0]['plan_id'];
+            $plan = $this->subscriptionPlansCRUD->find($planId);
+
+            // Compter les utilisations
+            $activeConversations = $this->conversationsCRUD->count([
+                'user_id' => $userId,
+                'is_archived' => 0
+            ]);
+
+            $totalConversations = $this->conversationsCRUD->count([
+                'user_id' => $userId
+            ]);
+
+            return [
+                'status' => 'success',
+                'data' => [
+                    'plan_name' => $plan['name'] ?? 'Plan gratuit',
+                    'active_conversations' => $activeConversations,
+                    'total_conversations' => $totalConversations,
+                    'max_conversations' => $plan['max_conversations'] ?? 3,
+                    'expires_at' => $userSub[0]['expires_at'] ?? null,
+                    'remaining_conversations' => ($plan['max_conversations'] ?? 3) - $activeConversations
+                ]
+            ];
+        } catch (Exception $e) {
+            logError("Erreur lors de la récupération des statistiques", ['error' => $e->getMessage()]);
+            return [
+                'status' => 'error',
+                'message' => "Erreur lors de la récupération des statistiques"
             ];
         }
     }

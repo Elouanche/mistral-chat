@@ -157,3 +157,17 @@ INSERT INTO api_logs (user_id, request_id, event_type, details) VALUES
 (1, 1, 'request_completed', '{"duration_ms": 543, "status": "success"}'),
 (3, 2, 'request_completed', '{"duration_ms": 732, "status": "success"}'),
 (4, 3, 'request_initiated', '{"timestamp": "2025-05-16T14:25:30Z"}');
+
+-- Ajout de plans d’abonnement
+INSERT INTO subscription_plans (name, description, price, max_conversations, max_messages_per_day, is_active) VALUES
+('Gratuit', 'Plan gratuit avec fonctionnalités limitées', 0.00, 3, 50, 1),
+('Standard', 'Plan standard pour une utilisation régulière', 9.99, 10, 200, 1),
+('Pro', 'Plan professionnel pour les utilisateurs avancés', 29.99, 50, 1000, 1),
+('Entreprise', 'Plan entreprise pour les grandes équipes', 99.99, 200, 5000, 1);
+
+-- Ajout d’abonnements utilisateurs
+INSERT INTO user_subscriptions (user_id, plan_id, status, started_at, expires_at) VALUES
+(1, 2, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(2, 1, 'active', NOW(), NULL),
+(3, 3, 'cancelled', DATE_SUB(NOW(), INTERVAL 60 DAY), DATE_SUB(NOW(), INTERVAL 30 DAY)),
+(4, 2, 'expired', DATE_SUB(NOW(), INTERVAL 90 DAY), DATE_SUB(NOW(), INTERVAL 60 DAY));

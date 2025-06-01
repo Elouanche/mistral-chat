@@ -25,7 +25,7 @@ if (isset($_SESSION['user_id'])) {
 
 <body>
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/login.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/page-login.css">
 
 <main role="main" class="login">
     <section id="connexion" class="login-container" aria-labelledby="connexionTitle">
@@ -90,36 +90,40 @@ if (isset($_SESSION['user_id'])) {
 <!-- Ajout du SDK Google -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-function handleCredentialResponse(response) {
-    // Envoyer le token ID au backend
-    fetch('/auth/google/callback', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({credential: response.credential})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            window.location.href = data.redirect;
-        } else {
-            document.getElementById('loginErrorMessage').textContent = data.message;
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurer le bouton Google
+    const googleLoginBtn = document.getElementById('googleLogin');
+    
+    googleLoginBtn.addEventListener('click', function() {
+        // Appeler l'API pour obtenir l'URL d'authentification Google
+        fetch('/api/api_gateway.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                service: 'Auth',
+                action: 'GoogleAuth',
+                data: {}
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.data && data.data.auth_url) {
+                // Rediriger vers l'URL d'authentification Google
+                window.location.href = data.data.auth_url;
+            } else {
+                document.getElementById('loginErrorMessage').textContent = data.message || 'Erreur lors de l\'authentification Google';
+                document.getElementById('loginErrorMessage').hidden = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            document.getElementById('loginErrorMessage').textContent = 'Erreur de connexion au serveur';
             document.getElementById('loginErrorMessage').hidden = false;
-        }
+        });
     });
-}
-
-window.onload = function () {
-    google.accounts.id.initialize({
-        client_id: '<?= GOOGLE_CLIENT_ID ?>',
-        callback: handleCredentialResponse
-    });
-    google.accounts.id.renderButton(
-        document.getElementById("googleLogin"),
-        { theme: "outline", size: "large" }
-    );
-};
+});
 </script>
 
 <?php require_once COMPONENT_PATH . 'foot.php'; ?>

@@ -23,6 +23,9 @@ require_once __DIR__ . '/AnalyticsCRUD.php';
 require_once __DIR__ . '/NotificationsCRUD.php';
 require_once __DIR__ . '/MonitoringCRUD.php';
 require_once __DIR__ . '/ErrorLogsCRUD.php';
+require_once __DIR__ . '/SubscriptionPlansCRUD.php';
+require_once __DIR__ . '/UserSubscriptionsCRUD.php';
+require_once __DIR__ . '/ApiKeysCRUD.php';
 
 /**
  * ====================================
@@ -291,6 +294,52 @@ require_once __DIR__ . '/ErrorLogsCRUD.php';
  * - logError($type, $message, $details = null) : Enregistre une erreur
  * - getErrors($startDate, $endDate, $type = null) : Récupère les erreurs
  * - getRecentErrors($limit) : Récupère les erreurs récentes
+ */
+
+/**
+ * ====================================
+ * DOCUMENTATION DES NOUVELLES CLASSES CRUD
+ * ====================================
+ */
+
+/**
+ * SubscriptionPlansCRUD - Opérations CRUD pour la table subscription_plans
+ * 
+ * Méthodes spécifiques:
+ * ---------------------
+ * - getActivePlans() : Récupère tous les plans actifs
+ * - getPlanDetails($planId) : Récupère les détails d'un plan
+ * - getAvailableModels($planId) : Récupère les modèles disponibles pour un plan
+ */
+
+/**
+ * UserSubscriptionsCRUD - Opérations CRUD pour la table user_subscriptions
+ * 
+ * Méthodes spécifiques:
+ * ---------------------
+ * - getActiveSubscription($userId) : Récupère l'abonnement actif d'un utilisateur
+ * - cancelSubscription($subscriptionId) : Annule un abonnement
+ * - renewSubscription($subscriptionId) : Renouvelle un abonnement
+ */
+
+/**
+ * PlanModelsCRUD - Opérations CRUD pour la table plan_models
+ * 
+ * Méthodes spécifiques:
+ * ---------------------
+ * - getModelsByPlan($planId) : Récupère les modèles disponibles pour un plan
+ * - addModelToPlan($planId, $modelName) : Ajoute un modèle à un plan
+ * - removeModelFromPlan($planId, $modelName) : Retire un modèle d'un plan
+ */
+
+/**
+ * ApiKeysCRUD - Opérations CRUD pour la table api_keys
+ * 
+ * Méthodes spécifiques:
+ * ---------------------
+ * - generateApiKey($userId) : Génère une nouvelle clé API pour un utilisateur
+ * - validateApiKey($apiKey) : Vérifie la validité d'une clé API
+ * - deactivateApiKey($apiKeyId) : Désactive une clé API
  */
 
 // Afficher un message indiquant que ce fichier est destiné à la documentation

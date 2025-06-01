@@ -15,5 +15,6 @@ define('API_PATH', BASE_PATH . 'api/');
 define('SERVICES_PATH', BASE_PATH . 'services/');
 define('CRUD_PATH', BASE_PATH . 'CRUD/');
 define('SERVICE_CRUD_PATH', BASE_PATH . 'SERVICE_CRUD/');
+define('SECURISER_PATH', BASE_PATH . 'securiser/');
 
 

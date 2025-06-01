@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/MonitoringCRUD.php';
+require_once CRUD_PATH . 'MonitoringCRUD.php';
 
 /**
  * Service de surveillance du système

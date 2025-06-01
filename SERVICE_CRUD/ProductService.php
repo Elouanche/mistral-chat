@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/ProductsCRUD.php';
+require_once CRUD_PATH . 'ProductsCRUD.php';
 
 /**
  * Service de gestion des produits

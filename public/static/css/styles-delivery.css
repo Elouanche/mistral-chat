@@ -4,14 +4,14 @@
 
 /* Styles pour les boutons d'action de livraison */
 .delivery-action-btn {
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--color-success);
+    color: var(--color-white);
     border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    margin-right: 5px;
-    font-size: 0.9em;
+    margin-right: var(--spacing-xs);
+    font-size: var(--font-size-xs);
 }
 
 .delivery-action-btn:hover {
@@ -19,7 +19,7 @@
 }
 
 .create-shipment-btn {
-    background-color: #2196F3;
+    background-color: var(--color-primary);
 }
 
 .create-shipment-btn:hover {
@@ -27,7 +27,7 @@
 }
 
 .generate-label-btn {
-    background-color: #ff9800;
+    background-color: var(--color-warning);
 }
 
 .generate-label-btn:hover {
@@ -35,7 +35,7 @@
 }
 
 .track-shipment-btn {
-    background-color: #9c27b0;
+    background-color: var(--color-info);
 }
 
 .track-shipment-btn:hover {
@@ -46,7 +46,7 @@
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: var(--z-modal);
     left: 0;
     top: 0;
     width: 100%;

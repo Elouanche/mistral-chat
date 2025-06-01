@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/AnalyticsCRUD.php';
+require_once CRUD_PATH . 'AnalyticsCRUD.php';
 
 /**
  * Service de gestion des analyses

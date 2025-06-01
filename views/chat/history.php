@@ -1,8 +1,11 @@
+<?php
+require_once SHARED_PATH . 'userAcces.php';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php require_once COMPONENT_PATH . 'head.php'; ?>
-    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/chat.css">
+    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/page-chat.css">
     <title>Mistral Chat - Historique des conversations</title>
 </head>
 
@@ -54,8 +57,7 @@
         </div>
     </main>
     
-    <?php require_once COMPONENT_PATH . 'footer.php'; ?>
+
     
-    <script src="<?php echo STATIC_URL; ?>js/chat-history.js"></script>
-</body>
-</html>
+    <script src="<?php echo STATIC_URL; ?>js/page-chat-history.js"></script>
+<?php require_once COMPONENT_PATH . 'foot.php'; ?>

@@ -2,7 +2,11 @@
 require_once CRUD_PATH . 'AiRequestsCRUD.php';
 require_once CRUD_PATH . 'AiMessagesCRUD.php';
 require_once CRUD_PATH . 'ApiUsageCRUD.php';
-require_once SHARED_PATH . 'apiRequest.php';
+require_once CRUD_PATH . 'AiModelsCRUD.php';
+require_once SHARED_PATH . 'externRequest.php';
+
+
+
 
 /**
  * Service pour l'interaction avec l'API Mistral
@@ -16,6 +20,9 @@ class MistralApiService {
     
     /** @var ApiUsageCRUD $usageCRUD Instance du CRUD pour l'utilisation */
     private $usageCRUD;
+    /** @var AiModelsCRUD $modelsCRUD Instance du CRUD pour l'utilisation */
+    private $modelsCRUD;
+    
     
     /** @var string $apiKey Clé API Mistral */
     private $apiKey;
@@ -33,6 +40,7 @@ class MistralApiService {
         $this->requestsCRUD = new AiRequestsCRUD($mysqli);
         $this->AiMessagesCRUD = new AiMessagesCRUD($mysqli);
         $this->usageCRUD = new ApiUsageCRUD($mysqli);
+        $this->modelsCRUD = new AiModelsCRUD($mysqli);
         
         // Utiliser la clé API fournie ou récupérer celle par défaut
         $this->apiKey = $apiKey ?? get_env_variable('MISTRAL_API_KEY');
@@ -47,8 +55,8 @@ class MistralApiService {
      */
     public function getModels() {
         try {
-            $modelsCRUD = new AiModelsCRUD($this->requestsCRUD->mysqli);
-            $models = $modelsCRUD->get(['*'], ['is_active' => 1]);
+            
+            $models = $this->modelsCRUD->get(['*'], ['is_active' => 1]);
             
             return [
                 'status' => 'success',
@@ -80,8 +88,8 @@ class MistralApiService {
             }
             
             // Récupérer le nom du modèle à partir de l'ID
-            $modelsCRUD = new AiModelsCRUD($this->requestsCRUD->mysqli);
-            $models = $modelsCRUD->get(['model_name'], ['id' => $data['model_id'], 'is_active' => 1]);
+           
+            $models = $this->modelsCRUD->get(['model_name'], ['id' => $data['model_id'], 'is_active' => 1]);
             $modelName = !empty($models) ? $models[0]['model_name'] : null;
             
             if (!$modelName) {
@@ -111,7 +119,7 @@ class MistralApiService {
                 'status' => 'pending'
             ];
             
-            $requestId = $this->requestsCRUD->createRequest($requestData);
+            $requestId = $this->requestsCRUD->insert($requestData);
             
             if (!$requestId) {
                 return [
@@ -129,7 +137,7 @@ class MistralApiService {
             
             // Envoyer la requête à l'API Mistral
             $startTime = microtime(true);
-            $response = apiRequest($this->apiEndpoint, 'POST', $requestParams, $headers);
+            $response = externRequest($this->apiEndpoint, 'POST', $requestParams, $headers);
             $endTime = microtime(true);
             $latency = round(($endTime - $startTime) * 1000); // en millisecondes
             
@@ -141,7 +149,7 @@ class MistralApiService {
                 'error_message' => isset($response['error']) ? $response['error']['message'] : null
             ];
             
-            $this->requestsCRUD->updateRequest($requestId, $updateData);
+            $this->requestsCRUD->update($updateData, ['id' => $requestId]);
             
             // En cas d'erreur dans la réponse
             if (isset($response['error'])) {
@@ -159,7 +167,7 @@ class MistralApiService {
                 'raw_response' => json_encode($response)
             ];
             
-            $responseId = $this->AiMessagesCRUD->createResponse($responseData);
+            $responseId = $this->AiMessagesCRUD->insert($responseData);
             
             // Enregistrer l'utilisation des tokens
             if (isset($response['usage'])) {
@@ -173,13 +181,13 @@ class MistralApiService {
                     'usage_date' => date('Y-m-d')
                 ];
                 
-                $this->usageCRUD->recordUsage($usageData);
+                $this->usageCRUD->insert($usageData);
                 
                 // Mettre à jour la requête avec les tokens utilisés
-                $this->requestsCRUD->updateRequest($requestId, [
+                $this->requestsCRUD->update([
                     'tokens_prompt' => $response['usage']['prompt_tokens'] ?? 0,
                     'tokens_completion' => $response['usage']['completion_tokens'] ?? 0
-                ]);
+                ], ['id' => $requestId]);
             }
             
             // Préparer la réponse pour le client

@@ -17,7 +17,7 @@ $products = makeApiRequest('AdminProduct', 'getAllProducts');
 <body>
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/admin-inventory.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/page-admin-inventory.css">
 
 <main class="admin-inventory" role="main">
     <div class="inventory-header">

@@ -1,17 +1,17 @@
+
 .cart-counter {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #e74c3c;
-    color: white;
-    border-radius: 50%;
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    border-radius: var(--radius-full);
     width: 20px;
     height: 20px;
-    font-size: 12px;
+    font-size: var(--font-size-xs);
     position: relative;
     top: -10px;
     right: 5px;
-  
 }
 
 .cart-icon {

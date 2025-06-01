@@ -1,8 +1,11 @@
+<?php
+require_once SHARED_PATH . 'session.php';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <?php require_once COMPONENT_PATH . 'head.php'; ?>
-    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/subscription.css">
+    <link type="text/css" rel="stylesheet" href="<?php echo STATIC_URL; ?>css/page-subscription.css">
     <title>Mistral Chat - Abonnements</title>
 </head>
 
@@ -32,7 +35,7 @@
                 <div class="loading-spinner" id="plans-loading">
                     <div class="spinner"></div>
                 </div>
-                <!-- Les plans seront chargés dynamiquement ici -->
+                <!-- plans charges dynamiquemen -->
             </div>
         </section>
         
@@ -113,10 +116,16 @@
     </div>
 
     <script src="https://js.stripe.com/v3/"></script>
-    <script src="<?php echo STATIC_URL; ?>js/subscription.js"></script>
+    <script>
+        // Définir l'ID utilisateur pour JavaScript
+        <?php if(isset($_SESSION['user_id'])): ?>
+        const currentUserId = <?php echo json_encode($_SESSION['user_id']); ?>;
+        <?php else: ?>
+        const currentUserId = null;
+        <?php endif; ?>
+    </script>
+    <script src="<?php echo STATIC_URL; ?>js/page-subscription.js"></script>
     
    
     
-    <?php require_once COMPONENT_PATH . 'footer.php'; ?>
-</body>
-</html>
+<?php require_once COMPONENT_PATH . 'foot.php'; ?>

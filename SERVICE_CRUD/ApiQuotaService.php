@@ -1,7 +1,7 @@
 <?php
-require_once CRUD_PATH . '/ApiQuotasCRUD.php';
-require_once CRUD_PATH . '/AiRequestsCRUD.php';
-require_once CRUD_PATH . '/ApiUsageCRUD.php';
+require_once CRUD_PATH . 'ApiQuotasCRUD.php';
+require_once CRUD_PATH . 'AiRequestsCRUD.php';
+require_once CRUD_PATH . 'ApiUsageCRUD.php';
 
 /**
  * Service pour la gestion des quotas d'utilisation de l'API
@@ -42,16 +42,19 @@ class ApiQuotaService {
                     'message' => "L'ID de l'utilisateur est obligatoire"
                 ];
             }
+            $userId = $data['user_id'];
+
+            
             
             // Récupérer les quotas de l'utilisateur
-            $quota = $this->quotasCRUD->get(['*'], ['user_id' => $data['user_id']]);
+            $quota = $this->quotasCRUD->get(['*'], ['user_id' =>$userId]);
             $quota = !empty($quota) ? $quota[0] : null;
             
             // Si l'utilisateur n'a pas de quotas définis, créer des quotas par défaut
             if (!$quota) {
                 // Créer quota par défaut
                 $quotaId = $this->quotasCRUD->insert([
-                    'user_id' => $data['user_id'],
+                    'user_id' =>$userId,
                     'max_tokens_per_day' => 10000,
                     'max_requests_per_minute' => 10,
                     'max_monthly_cost' => 10.00
@@ -61,7 +64,7 @@ class ApiQuotaService {
             
             // Vérifier les limites
             $requestCount = $this->requestsCRUD->count([
-                'user_id' => $data['user_id'],
+                'user_id' =>$userId,
                 'created_at >=' => date('Y-m-d H:i:s', strtotime('-1 minute'))
             ]);
             
@@ -83,7 +86,18 @@ class ApiQuotaService {
             // Vérifier le nombre de tokens par jour
             $today = date('Y-m-d 00:00:00');
             $tomorrow = date('Y-m-d 23:59:59');
-            $tokensToday = $this->requestsCRUD->calculateUserTokens($data['user_id'], $today, $tomorrow);
+            $usage = $this->requestsCRUD->get(
+                ['SUM(tokens_prompt) as total_prompt', 'SUM(tokens_completion) as total_completion'],
+                [
+                    'user_id' =>$userId,
+                    'created_at >=' => $today,
+                    'created_at <' => $tomorrow
+                ]
+            );
+            $tokensToday = [
+                'total_prompt' => $usage[0]['total_prompt'] ?? 0,
+                'total_completion' => $usage[0]['total_completion'] ?? 0
+            ];
             $totalTokensToday = $tokensToday['total_prompt'] + $tokensToday['total_completion'];
             
             if ($totalTokensToday >= $quota['max_tokens_per_day']) {
@@ -104,8 +118,16 @@ class ApiQuotaService {
             // Vérifier le coût mensuel
             $firstDayOfMonth = date('Y-m-01 00:00:00');
             $lastDayOfMonth = date('Y-m-t 23:59:59');
-            $monthlyCost = $this->usageCRUD->calculateUserCost($data['user_id'], $firstDayOfMonth, $lastDayOfMonth);
-            
+            // Calculer le coût mensuel
+            $usage = $this->usageCRUD->get(
+                ['SUM(cost) as total_cost'],
+                [
+                    'user_id' => $data['user_id'],
+                    'usage_date >=' => $firstDayOfMonth,
+                    'usage_date <=' => $lastDayOfMonth
+                ]
+            );
+            $monthlyCost = !empty($usage) ? (float)$usage[0]['total_cost'] : 0.00;
             if ($monthlyCost >= $quota['max_monthly_cost']) {
                 return [
                     'status' => 'error',
@@ -135,7 +157,7 @@ class ApiQuotaService {
                 ]
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la vérification des quotas", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            logError("Erreur lors de la vérification des quotas", ['error' => $e->getMessage(), 'user_id' =>$userId ?? null]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la vérification des quotas"
@@ -158,22 +180,25 @@ class ApiQuotaService {
                     'message' => "L'ID de l'utilisateur est obligatoire"
                 ];
             }
+            $userId = $data['user_id'];
             
             // Récupérer les quotas actuels de l'utilisateur
-            $currentQuota = $this->quotasCRUD->getUserQuota($data['user_id']);
+            $quotaResults = $this->quotasCRUD->get(['*'], ['user_id' =>$userId]);
+            $currentQuota = !empty($quotaResults) ? $quotaResults[0] : null;
             
             // Si l'utilisateur n'a pas de quotas définis, créer des quotas par défaut
             if (!$currentQuota) {
                 $defaultQuota = [
-                    'user_id' => $data['user_id'],
+                    'user_id' =>$userId,
                     'max_tokens_per_day' => 10000,
                     'max_requests_per_minute' => 10,
                     'max_monthly_cost' => 10.00,
-                    'is_unlimited' => false
+                    'is_unlimited' => 0
                 ];
                 
-                $quotaId = $this->quotasCRUD->createQuota($defaultQuota);
-                $currentQuota = $this->quotasCRUD->getUserQuota($data['user_id']);
+                $quotaId = $this->quotasCRUD->insert($defaultQuota);
+                $quotaResults = $this->quotasCRUD->get(['*'], ['id' => $quotaId]);
+                $currentQuota = !empty($quotaResults) ? $quotaResults[0] : null;
                 
                 if (!$currentQuota) {
                     return [
@@ -211,7 +236,7 @@ class ApiQuotaService {
             }
             
             // Mettre à jour les quotas
-            $success = $this->quotasCRUD->updateQuota($currentQuota['id'], $updateData);
+            $success = $this->quotasCRUD->update($updateData, ['id' => $currentQuota['id']]);
             
             if (!$success) {
                 return [
@@ -221,7 +246,8 @@ class ApiQuotaService {
             }
             
             // Récupérer les quotas mis à jour
-            $updatedQuota = $this->quotasCRUD->getUserQuota($data['user_id']);
+            $updatedResults = $this->quotasCRUD->get(['*'], ['user_id' =>$userId]);
+            $updatedQuota = !empty($updatedResults) ? $updatedResults[0] : null;
             
             return [
                 'status' => 'success',
@@ -229,7 +255,7 @@ class ApiQuotaService {
                 'data' => $updatedQuota
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la mise à jour des quotas", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            logError("Erreur lors de la mise à jour des quotas", ['error' => $e->getMessage(), 'user_id' =>$userId ?? null]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la mise à jour des quotas"
@@ -252,22 +278,25 @@ class ApiQuotaService {
                     'message' => "L'ID de l'utilisateur est obligatoire"
                 ];
             }
+            $userId = $data['user_id'];
             
             // Récupérer les quotas de l'utilisateur
-            $quota = $this->quotasCRUD->getUserQuota($data['user_id']);
+            $quotaResults = $this->quotasCRUD->get(['*'], ['user_id' =>$userId]);
+            $quota = !empty($quotaResults) ? $quotaResults[0] : null;
             
             // Si l'utilisateur n'a pas de quotas définis, créer des quotas par défaut
             if (!$quota) {
                 $defaultQuota = [
-                    'user_id' => $data['user_id'],
+                    'user_id' =>$userId,
                     'max_tokens_per_day' => 10000,
                     'max_requests_per_minute' => 10,
                     'max_monthly_cost' => 10.00,
-                    'is_unlimited' => false
+                    'is_unlimited' => 0
                 ];
                 
-                $quotaId = $this->quotasCRUD->createQuota($defaultQuota);
-                $quota = $this->quotasCRUD->getUserQuota($data['user_id']);
+                $quotaId = $this->quotasCRUD->insert($defaultQuota);
+                $quotaResults = $this->quotasCRUD->get(['*'], ['id' => $quotaId]);
+                $quota = !empty($quotaResults) ? $quotaResults[0] : null;
                 
                 if (!$quota) {
                     return [
@@ -280,17 +309,41 @@ class ApiQuotaService {
             // Récupérer l'utilisation actuelle
             $now = date('Y-m-d H:i:s');
             $oneMinuteAgo = date('Y-m-d H:i:s', strtotime('-1 minute'));
-            $requestsLastMinute = $this->requestsCRUD->countUserRequests($data['user_id'], $oneMinuteAgo, $now);
+            $requestsLastMinute = $this->requestsCRUD->count([
+                'user_id' =>$userId,
+                'created_at >=' => $oneMinuteAgo,
+                'created_at <=' => $now
+            ]);
             
             $today = date('Y-m-d 00:00:00');
             $tomorrow = date('Y-m-d 23:59:59');
-            $tokensToday = $this->requestsCRUD->calculateUserTokens($data['user_id'], $today, $tomorrow);
+            // Calculer les tokens utilisés aujourd'hui
+            $usage = $this->requestsCRUD->get(
+                ['SUM(tokens_prompt) as total_prompt', 'SUM(tokens_completion) as total_completion'],
+                [
+                    'user_id' => $data['user_id'],
+                    'created_at >=' => $today,
+                    'created_at <=' => $tomorrow
+                ]
+            );
+            $tokensToday = [
+                'total_prompt' => $usage[0]['total_prompt'] ?? 0,
+                'total_completion' => $usage[0]['total_completion'] ?? 0
+            ];
             $totalTokensToday = $tokensToday['total_prompt'] + $tokensToday['total_completion'];
-            
+
+            // Calculer le coût mensuel
             $firstDayOfMonth = date('Y-m-01 00:00:00');
             $lastDayOfMonth = date('Y-m-t 23:59:59');
-            $monthlyCost = $this->usageCRUD->calculateUserCost($data['user_id'], $firstDayOfMonth, $lastDayOfMonth);
-            
+            $monthlyUsage = $this->usageCRUD->get(
+                ['SUM(cost) as total_cost'],
+                [
+                    'user_id' => $data['user_id'],
+                    'usage_date >=' => $firstDayOfMonth,
+                    'usage_date <=' => $lastDayOfMonth
+                ]
+            );
+            $monthlyCost = !empty($monthlyUsage) ? (float)$monthlyUsage[0]['total_cost'] : 0.00;
             return [
                 'status' => 'success',
                 'data' => [
@@ -303,7 +356,7 @@ class ApiQuotaService {
                 ]
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la récupération des quotas", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            logError("Erreur lors de la récupération des quotas", ['error' => $e->getMessage(), 'user_id' =>$userId ?? null]);
             return [
                 'status' => 'error',
                 'message' => "Erreur lors de la récupération des quotas"

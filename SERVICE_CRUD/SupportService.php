@@ -1,6 +1,6 @@
 <?php
-require_once CRUD_PATH . '/SupportConversationCRUD.php';
-require_once CRUD_PATH . '/SupportMessageCRUD.php';
+require_once CRUD_PATH . 'SupportConversationCRUD.php';
+require_once CRUD_PATH . 'SupportMessageCRUD.php';
 
 /**
  * Service de gestion du support client

@@ -2,8 +2,8 @@
 
 
 // Vérifier la connexion utilisateur
-$isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
-$userId = $isLoggedIn ? $_SESSION['user_id'] : null;
+require_once SHARED_PATH . 'userAcces.php';
+$userId = (int) $_SESSION['user_id'];
 
 // Préparation des paramètres pour l'API
 $params = [];

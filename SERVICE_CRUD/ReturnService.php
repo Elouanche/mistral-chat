@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/ReturnedsCRUD.php';
+require_once CRUD_PATH . 'ReturnedsCRUD.php';
 
 /**
  * Service de gestion des retours de produits

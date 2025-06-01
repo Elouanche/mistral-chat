@@ -128,8 +128,8 @@ $possibleStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled
     </div>
 </main>
 
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/orders.css">
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/modal.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-orders.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-modal.css">
 
 <!-- Données JSON pour JavaScript -->
 <script id="orderDetailsData" type="application/json"><?= json_encode($orderDetails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>

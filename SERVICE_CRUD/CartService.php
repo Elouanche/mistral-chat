@@ -1,8 +1,8 @@
 <?php
-require_once CRUD_PATH . '/CartCRUD.php';
-require_once CRUD_PATH . '/CartItemsCRUD.php';
-require_once CRUD_PATH . '/ProductsCRUD.php';
-require_once CRUD_PATH . '/ProductsImageCRUD.php';
+require_once CRUD_PATH . 'CartCRUD.php';
+require_once CRUD_PATH . 'CartItemsCRUD.php';
+require_once CRUD_PATH . 'ProductsCRUD.php';
+require_once CRUD_PATH . 'ProductsImageCRUD.php';
 
 /**
  * Service de gestion des paniers
@@ -303,6 +303,44 @@ class CartService {
             
             return ['status' => 'error', 'message' => 'Failed to update cart item quantity'];
         }
+        
+        // Pour les utilisateurs non connectés
+        $sessionCart = &$_SESSION[$this->sessionKey];
+        
+        // Si on a un cart_item_id temporaire
+        if ($cartItemId && strpos($cartItemId, 'temp_') === 0) {
+            foreach ($sessionCart['items'] as &$item) {
+                if ($item['cart_item_id'] === $cartItemId) {
+                    $item['quantity'] = $quantity;
+                    $item['item_total'] = $item['price'] * $quantity;
+                    $this->recalculateSessionCart();
+                    
+                    return [
+                        'status' => 'success',
+                        'message' => 'Cart item quantity updated successfully',
+                        'data' => $item
+                    ];
+                }
+            }
+        }
+        // Si on a un product_id
+        elseif ($productId) {
+            foreach ($sessionCart['items'] as &$item) {
+                if ($item['product_id'] === $productId) {
+                    $item['quantity'] = $quantity;
+                    $item['item_total'] = $item['price'] * $quantity;
+                    $this->recalculateSessionCart();
+                    
+                    return [
+                        'status' => 'success',
+                        'message' => 'Cart item quantity updated successfully',
+                        'data' => $item
+                    ];
+                }
+            }
+        }
+        
+        return ['status' => 'error', 'message' => 'Cart item not found in session'];
     }
     
     /**

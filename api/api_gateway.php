@@ -15,6 +15,7 @@ require_once SHARED_PATH . "erreur.php";
 require_once CONFIG_PATH . "coDB.php";
 require_once API_PATH . "handleService.php";
 require_once CONFIG_PATH . "mail.php";
+require_once SECURISER_PATH . "oauth_config.php";
 
 
 require_once SERVICE_CRUD_PATH . "AuthService.php";
@@ -45,13 +46,13 @@ $isAdmin = isset($_SESSION['admin']) && $_SESSION['admin'] === 'admin';
 
 define('ALLOWED_SERVICES', [
     // Services utilisateurs
-    'Auth', 'User', 'Product', 'Cart', 'Order', 'Returned', 'Review',
+    'Auth', 'User', 'Product', 'Cart', 'Order', 'Returned', 'Review', 'Subscription',
     // Services admin
     'AdminOrder', 'AdminProduct', 'AdminReturned', 'AdminUser',
     // Services système
     'Payment', 'Notification', 'Delivery', 'Import', 'Analytics',
     // Services communs
-    'ErrorHandling', 'Monitoring', 'AdminAuth',
+    'ErrorHandling', 'Monitoring',
     // Nouveaux services IA
     'MistralApi', 'ApiQuota', 'AiConversation'
 ]);
@@ -221,6 +222,10 @@ function routeRequest($conn, $service, $action, $data) {
         'AiConversation' => function() use ($conn, $action, $data) {
             return handleAiConversationService($conn, $action, $data);
         },
+        'Subscription' => function() use ($conn, $action, $data) {
+            return handleSubscriptionService($conn, $action, $data);
+        },
+        // ... Autres services ...
     ];
 
     if (!isset($serviceHandlers[$service])) {

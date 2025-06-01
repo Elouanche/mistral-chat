@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/UsersCRUD.php';
+require_once CRUD_PATH . 'UsersCRUD.php';
 
 /**
  * Service de gestion des utilisateurs

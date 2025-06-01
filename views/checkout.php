@@ -1,10 +1,9 @@
 <?php
 
+require_once SHARED_PATH . 'userAcces.php';
 
-
-// Vérification de l'utilisateur
-$isLoggedIn = isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
-$userId = $isLoggedIn ? $_SESSION['user_id'] : null;
+// Vérification de l'utilisateur déjà faite dans userAcces.php
+$userId = (int) $_SESSION['user_id'];
 
 // Préparation des paramètres pour l'API
 $params = [];
@@ -39,7 +38,7 @@ if (is_array($cartResult) && isset($cartResult['status']) && $cartResult['status
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 <!-- Liens CSS -->
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/checkout-page.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/page-checkout.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 

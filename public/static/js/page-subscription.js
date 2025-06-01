@@ -41,6 +41,13 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
     }
     
+    // Fonction pour fermer toutes les modales
+    function closeAllModals() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.style.display = 'none';
+        });
+    }
+    
     function setupEventListeners() {
         // Fermer les modals
         document.querySelectorAll('.close-modal').forEach(btn => {
@@ -97,15 +104,15 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const featuresObj = typeof plan.features === 'string' 
                     ? JSON.parse(plan.features) 
-                    : plan.features;
+                    : plan.features || {};
                 
                 // Ajouter les modèles disponibles
-                if (featuresObj.models && featuresObj.models.length > 0) {
+                if (featuresObj && featuresObj.models && featuresObj.models.length > 0) {
                     features.push(`Accès aux modèles: ${featuresObj.models.join(', ')}`);
                 }
                 
                 // Ajouter le support prioritaire
-                if (featuresObj.priority_support) {
+                if (featuresObj && featuresObj.priority_support) {
                     features.push('Support prioritaire');
                 }
             } catch (e) {
@@ -113,7 +120,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Ajouter la limite de tokens
-            features.push(`${plan.token_limit.toLocaleString()} tokens par mois`);
+            if (plan.token_limit) {
+                features.push(`${plan.token_limit.toLocaleString()} tokens par mois`);
+            } else {
+                // Utiliser les valeurs de max_conversations et max_messages_per_day comme alternative
+                features.push(`${plan.max_conversations} conversations`);
+                features.push(`${plan.max_messages_per_day} messages par jour`);
+            }
             
             // Générer la liste des fonctionnalités
             const featuresList = features.map(feature => 
@@ -157,11 +170,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderCurrentSubscription() {
         if (!currentSubscriptionContent || !currentSubscription) return;
         
-        const plan = currentSubscription.plan;
-        const usage = currentSubscription.usage;
+        const plan = currentSubscription.plan || {};
+        const usage = currentSubscription.usage || {};
         
         // Calculer le pourcentage d'utilisation
-        const usagePercent = Math.min(100, Math.round((usage.tokens_used / usage.tokens_limit) * 100));
+        const usagePercent = usage.tokens_used && usage.tokens_limit 
+            ? Math.min(100, Math.round((usage.tokens_used / usage.tokens_limit) * 100))
+            : 0;
         
         // Formater les dates
         const startDate = new Date(currentSubscription.start_date);
@@ -176,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="subscription-meta">
                         <div class="subscription-meta-item">
                             <span class="meta-label">Plan</span>
-                            <span class="meta-value">${plan.name}</span>
+                            <span class="meta-value">${plan.name || 'Non spécifié'}</span>
                         </div>
                         <div class="subscription-meta-item">
                             <span class="meta-label">Statut</span>
@@ -262,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelConfirmModal.classList.add('active');
     }
     
-    function handleSubscribeSubmit(event) {
+    async function handleSubscribeSubmit(event) {
         event.preventDefault();
         
         const planId = planIdInput.value;
@@ -276,21 +291,87 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Traitement en cours...';
         
-        // Si le plan est gratuit, pas besoin de paiement
-        if (parseFloat(selectedPlan.price) <= 0) {
-            createSubscription(planId);
-            return;
-        }
-        
-        // Sinon, traiter le paiement avec Stripe
-        if (stripe && elements) {
-            // Ici, vous intégreriez la logique de paiement Stripe
-            // Pour cet exemple, nous allons simplement créer l'abonnement
-            createSubscription(planId);
-        } else {
-            alert('Erreur: Le système de paiement n\'est pas disponible.');
+        try {
+            // Si le plan est gratuit, pas besoin de paiement
+            if (parseFloat(selectedPlan.price) <= 0) {
+                await createSubscription(planId);
+                return;
+            }
+            
+            // Sinon, traiter le paiement avec Stripe
+            if (!stripe || !elements) {
+                throw new Error('Le système de paiement n\'est pas disponible.');
+            }
+
+            // Créer d'abord l'intention de paiement côté serveur
+            const paymentIntentContext = {
+                service: 'Payment',
+                action: 'createPaymentIntent',
+                data: {
+                    amount: selectedPlan.price * 100, // Convertir en centimes pour Stripe
+                    currency: 'eur',
+                    payment_method_types: ['card'],
+                    metadata: {
+                        plan_id: planId,
+                        plan_name: selectedPlan.name
+                    }
+                }
+            };
+
+            const paymentIntentResult = await postData(paymentIntentContext);
+            
+            if (paymentIntentResult.status !== 'success' || !paymentIntentResult.data.client_secret) {
+                throw new Error(paymentIntentResult.message || 'Erreur lors de la création de l\'intention de paiement');
+            }
+
+            // Confirmer le paiement avec Stripe
+            const { error: stripeError } = await stripe.confirmCardPayment(
+                paymentIntentResult.data.client_secret,
+                {
+                    payment_method: {
+                        card: elements.getElement('card'),
+                        billing_details: {
+                            email: document.getElementById('user_email')?.value
+                        }
+                    }
+                }
+            );
+
+            if (stripeError) {
+                throw new Error(stripeError.message);
+            }
+
+            // Si le paiement est réussi, créer l'abonnement
+            await createSubscription(planId);
+            
+            // Afficher un message de succès
+            showNotification('Paiement traité avec succès', 'success');
+            closeAllModals();
+            loadCurrentSubscription();
+
+        } catch (error) {
+            console.error('Erreur:', error);
+            showNotification(error.message || 'Une erreur est survenue lors du traitement du paiement', 'error');
+        } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Confirmer l\'abonnement';
+        }
+    }
+
+    // Ajouter cette fonction d'aide pour les notifications
+    function showNotification(message, type = 'info') {
+        if (typeof Toastify === 'function') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                gravity: 'top',
+                position: 'right',
+                backgroundColor: type === 'error' ? '#ff4444' : 
+                               type === 'success' ? '#00C851' : 
+                               '#33b5e5'
+            }).showToast();
+        } else {
+            alert(message);
         }
     }
     
@@ -301,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const context = {
             service: 'Subscription',
-            action: 'create',
+            action: 'createSubscription', // Changé de 'create' à 'createSubscription'
             data: {
                 plan_id: planId
             }
@@ -330,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleCancelSubscription() {
         const context = {
             service: 'Subscription',
-            action: 'cancel',
+            action: 'cancelSubscription', // Changé de 'cancel' à 'cancelSubscription'
             data: {
                 subscription_id: currentSubscription.id
             }
@@ -354,26 +435,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function loadCurrentSubscription() {
         if (!currentSubscriptionContent) return;
+        if (!currentUserId) {
+            currentSubscriptionContent.innerHTML = `
+                <div class="no-subscription">
+                    <p>Vous devez être connecté pour voir votre abonnement. <a href="/user/login.php">Se connecter</a></p>
+                </div>
+            `;
+            currentSubscriptionLoading.style.display = 'none';
+            currentSubscriptionContent.style.display = 'block';
+            return;
+        }
 
         currentSubscriptionLoading.style.display = 'flex';
         currentSubscriptionContent.style.display = 'none';
 
         const context = {
             service: 'Subscription',
-            action: 'getCurrent'
+            action: 'getUserSubscription',  // Changé de 'getCurrent' à 'getUserSubscription'
+            data: {
+                user_id: currentUserId
+            }
         };
 
         postData(context)
             .then(data => {
-                if (data.status === 'success' && data.data) {
-                    currentSubscription = data.data;
-                    renderCurrentSubscription();
+                if (data.status === 'success') {
+                    if (data.data && data.data.data) {
+                        currentSubscription = data.data.data;
+                        renderCurrentSubscription();
+                    } else {
+                        currentSubscriptionContent.innerHTML = `
+                            <div class="no-subscription">
+                                <p>Vous n'avez pas d'abonnement actif. Choisissez un plan ci-dessous pour commencer.</p>
+                            </div>
+                        `;
+                    }
                 } else {
-                    currentSubscriptionContent.innerHTML = `
-                        <div class="no-subscription">
-                            <p>Vous n'avez pas d'abonnement actif. Choisissez un plan ci-dessous pour commencer.</p>
-                        </div>
-                    `;
+                    console.error('Erreur:', data);
+                    currentSubscriptionContent.innerHTML = '<p class="error-message">Erreur lors du chargement de votre abonnement. Veuillez réessayer.</p>';
                 }
             })
             .catch(error => {
@@ -393,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const context = {
             service: 'Subscription',
-            action: 'getPlans'
+            action: 'getAvailablePlans'
         };
         
         postData(context)

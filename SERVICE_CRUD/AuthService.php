@@ -1,10 +1,10 @@
 <?php
-require_once CRUD_PATH . '/UsersCRUD.php';
-
+require_once CRUD_PATH . 'UsersCRUD.php';
 
 /**
  * Service d'authentification
  * Utilise UsersCRUD pour les opérations d'authentification
+ * Intègre également les fonctionnalités d'authentification Google OAuth
  */
 class AuthService {
     /** @var UsersCRUD $usersCRUD Instance du CRUD utilisateurs */
@@ -195,7 +195,6 @@ class AuthService {
             return ['status' => 'error', 'message' => 'Username/email, password and verification code are required'];
         }
         
-        // Recherche de l'utilisateur par nom d'utilisateur ou email
         // Recherche de l'utilisateur par nom d'utilisateur ou email
         $users = $this->usersCRUD->get(
             ['id', 'username', 'email', 'password_hash', 'is_admin'],
@@ -438,5 +437,252 @@ class AuthService {
         }
         
         return $username;
+    }
+    
+    /**
+     * Initialise l'authentification Google
+     * 
+     * @return array Statut de l'opération avec l'URL d'authentification
+     */
+    public function initiateGoogleAuth() {
+        // Initialiser le client Google
+        $client = $this->createGoogleClient();
+        
+        // Générer l'URL d'authentification
+        $authUrl = $client->createAuthUrl();
+        
+        return [
+            'status' => 'success',
+            'data' => ['auth_url' => $authUrl]
+        ];
+    }
+    
+    /**
+     * Traite le callback de Google OAuth
+     * 
+     * @param array $data Données du callback (code)
+     * @return array Données utilisateur Google
+     */
+    public function handleGoogleCallback($data) {
+        if (!isset($data['code'])) {
+            return ['status' => 'error', 'message' => 'Authorization code not provided'];
+        }
+        
+        try {
+            // Initialiser le client Google
+            $client = $this->createGoogleClient();
+            
+            // Échanger le code contre un jeton d'accès
+            $token = $client->fetchAccessTokenWithAuthCode($data['code']);
+            
+            if (isset($token['error'])) {
+                logError("Google OAuth error", ['error' => $token['error']]);
+                return ['status' => 'error', 'message' => 'Failed to get access token: ' . $token['error']];
+            }
+            
+            $client->setAccessToken($token);
+            
+            // Obtenir les informations de l'utilisateur
+            $oauth2 = new Google_Service_Oauth2($client);
+            $userInfo = $oauth2->userinfo->get();
+            
+            // Préparer les données utilisateur
+            $googleData = [
+                'sub' => $userInfo->id,
+                'email' => $userInfo->email,
+                'given_name' => $userInfo->givenName,
+                'family_name' => $userInfo->familyName,
+                'picture' => $userInfo->picture,
+                'access_token' => $token['access_token'] ?? null
+            ];
+            
+            return ['status' => 'success', 'data' => $googleData];
+            
+        } catch (Exception $e) {
+            logError("Google OAuth exception", ['message' => $e->getMessage()]);
+            return ['status' => 'error', 'message' => 'Google OAuth error: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Crée et configure une instance de Google_Client
+     * 
+     * @return Google_Client Instance configurée
+     */
+    private function createGoogleClient() {
+        $client = new Google_Client();
+        $client->setClientId(GOOGLE_CLIENT_ID);
+        $client->setClientSecret(GOOGLE_CLIENT_SECRET);
+        $client->setRedirectUri(GOOGLE_REDIRECT_URI);
+        $client->addScope("email");
+        $client->addScope("profile");
+        
+        return $client;
+    }
+}
+
+// Classes d'adaptation pour Google OAuth
+
+// Classe d'adaptation pour Google_Client
+if (!class_exists('Google_Client')) {
+    class Google_Client {
+        private $clientId;
+        private $clientSecret;
+        private $redirectUri;
+        private $scopes = [];
+        private $accessToken;
+        
+        public function setClientId($clientId) {
+            $this->clientId = $clientId;
+        }
+        
+        public function setClientSecret($clientSecret) {
+            $this->clientSecret = $clientSecret;
+        }
+        
+        public function setRedirectUri($redirectUri) {
+            $this->redirectUri = $redirectUri;
+        }
+        
+        public function addScope($scope) {
+            $this->scopes[] = $scope;
+        }
+        
+        public function createAuthUrl() {
+            // Construire l'URL d'authentification Google
+            $baseUrl = 'https://accounts.google.com/o/oauth2/auth';
+            $params = [
+                'client_id' => $this->clientId,
+                'redirect_uri' => $this->redirectUri,
+                'response_type' => 'code',
+                'scope' => implode(' ', $this->scopes),
+                'access_type' => 'online',
+                'prompt' => 'select_account'
+            ];
+            
+            return $baseUrl . '?' . http_build_query($params);
+        }
+        
+        public function fetchAccessTokenWithAuthCode($code) {
+            // Échanger le code d'autorisation contre un jeton d'accès
+            $url = 'https://oauth2.googleapis.com/token';
+            $data = [
+                'code' => $code,
+                'client_id' => $this->clientId,
+                'client_secret' => $this->clientSecret,
+                'redirect_uri' => $this->redirectUri,
+                'grant_type' => 'authorization_code'
+            ];
+            
+            $options = [
+                'http' => [
+                    'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'method' => 'POST',
+                    'content' => http_build_query($data)
+                ]
+            ];
+            
+            $context = stream_context_create($options);
+            $result = file_get_contents($url, false, $context);
+            
+            if ($result === FALSE) {
+                throw new Exception('Failed to fetch access token');
+            }
+            
+            return json_decode($result, true);
+        }
+        
+        public function setAccessToken($token) {
+            $this->accessToken = $token;
+        }
+        
+        public function verifyIdToken($idToken) {
+            // Vérifier le jeton d'ID
+            $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . $idToken;
+            $result = file_get_contents($url);
+            
+            if ($result === FALSE) {
+                throw new Exception('Failed to verify ID token');
+            }
+            
+            $payload = json_decode($result, true);
+            
+            // Vérifier que le jeton est valide pour notre application
+            if (isset($payload['aud']) && $payload['aud'] !== $this->clientId) {
+                throw new Exception('Invalid client ID in token');
+            }
+            
+            return $payload;
+        }
+    }
+}
+
+// Classe d'adaptation pour Google_Service_Oauth2
+if (!class_exists('Google_Service_Oauth2')) {
+    class Google_Service_Oauth2 {
+        private $client;
+        public $userinfo;
+        
+        public function __construct($client) {
+            $this->client = $client;
+            $this->userinfo = new Google_Service_Oauth2_Userinfo($client);
+        }
+    }
+}
+
+// Classe d'adaptation pour Google_Service_Oauth2_Userinfo
+if (!class_exists('Google_Service_Oauth2_Userinfo')) {
+    class Google_Service_Oauth2_Userinfo {
+        private $client;
+        
+        public function __construct($client) {
+            $this->client = $client;
+        }
+        
+        public function get() {
+            // Récupérer les informations de l'utilisateur
+            $accessToken = $this->client->accessToken['access_token'] ?? null;
+            
+            if (!$accessToken) {
+                throw new Exception('No access token available');
+            }
+            
+            $url = 'https://www.googleapis.com/oauth2/v3/userinfo';
+            $options = [
+                'http' => [
+                    'header' => "Authorization: Bearer $accessToken\r\n",
+                    'method' => 'GET'
+                ]
+            ];
+            
+            $context = stream_context_create($options);
+            $result = file_get_contents($url, false, $context);
+            
+            if ($result === FALSE) {
+                throw new Exception('Failed to fetch user info');
+            }
+            
+            $data = json_decode($result);
+            return new Google_Service_Oauth2_UserinfoResource($data);
+        }
+    }
+}
+
+// Classe d'adaptation pour les ressources d'informations utilisateur
+if (!class_exists('Google_Service_Oauth2_UserinfoResource')) {
+    class Google_Service_Oauth2_UserinfoResource {
+        public $id;
+        public $email;
+        public $givenName;
+        public $familyName;
+        public $picture;
+        
+        public function __construct($data) {
+            $this->id = $data->sub ?? null;
+            $this->email = $data->email ?? null;
+            $this->givenName = $data->given_name ?? null;
+            $this->familyName = $data->family_name ?? null;
+            $this->picture = $data->picture ?? null;
+        }
     }
 }

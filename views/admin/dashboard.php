@@ -32,9 +32,9 @@ function renderForm($id, $title, $fields, $submitText) {
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
 
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/orders.css">
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/delivery.css">
-<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/admin-modal.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-orders.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-delivery.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-admin-modal.css">
 
 
 <main role="main">

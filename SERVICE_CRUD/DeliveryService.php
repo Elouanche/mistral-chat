@@ -1,6 +1,6 @@
 <?php
-require_once CRUD_PATH . '/DeliveriesCRUD.php';
-require_once CRUD_PATH . '/OrdersCRUD.php';
+require_once CRUD_PATH . 'DeliveriesCRUD.php';
+require_once CRUD_PATH . 'OrdersCRUD.php';
 
 /**
  * Service de gestion des livraisons

@@ -7,7 +7,7 @@ return [
     '/home' => 'home',
     '/chat' => 'chat/index',
     '/chat/history' => 'chat/history',
-    '/subscription' => 'subscription/index',
+    '/subscription' => 'subscription',
     '/order-success' => 'success',
     '/email-success' => 'success',
     '/contact-success' => 'success',
@@ -30,6 +30,9 @@ return [
     '/user/login' => 'user/login',
     '/user/account' => 'user/account',
 
+    // Authentification
+    '/auth/google/callback' => 'auth/google/callback',
+    
     // Pages techniques
     '/error' => 'error',
     '/favicon.ico' => 'favicon.ico',

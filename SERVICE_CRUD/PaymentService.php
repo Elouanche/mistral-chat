@@ -1,9 +1,9 @@
 <?php
 
 use Stripe\ApiOperations\Update;
-require_once CRUD_PATH . '/PaymentsCRUD.php';
-require_once CRUD_PATH . '/OrdersCRUD.php';
-require_once BASE_PATH . '/vendor/autoload.php';
+require_once CRUD_PATH . 'PaymentsCRUD.php';
+require_once CRUD_PATH . 'OrdersCRUD.php';
+require_once BASE_PATH . 'vendor/autoload.php';
 
 // Énumération des statuts de paiement (PHP 8.1+)
 enum PaymentStatus: string {
@@ -78,8 +78,8 @@ class PaymentService {
         require BASE_PATH . "/securiser/stripe_api_keys.php";
         
         if (!isset($stripe_private_key) || !isset($stripe_public_key)) {
-            logWarning("Configuration Stripe incomplète");
-            return ['status' => 'error', 'message' => 'Configuration Stripe incomplète'];
+            logError("Configuration Stripe incomplète");
+
         }
         
         $this->stripePublicKey = $stripe_public_key;

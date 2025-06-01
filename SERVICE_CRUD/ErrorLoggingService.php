@@ -1,5 +1,5 @@
 <?php
-require_once CRUD_PATH . '/ErrorLogsCRUD.php';
+require_once CRUD_PATH . 'ErrorLogsCRUD.php';
 
 /**
  * Service de gestion des erreurs

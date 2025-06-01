@@ -4,5 +4,5 @@
     <script src="<?= htmlspecialchars(STATIC_URL); ?>js/notification.js" defer></script>
     <script src="<?= htmlspecialchars(STATIC_URL); ?>js/postData.js" defer></script>
     <script src="<?= htmlspecialchars(STATIC_URL); ?>js/prepaForms.js" defer></script>
-    <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/notification.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars(STATIC_URL); ?>css/styles-notification.css">
 </html>

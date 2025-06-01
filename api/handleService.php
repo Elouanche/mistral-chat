@@ -2,6 +2,7 @@
 // Path: api/handleService.php
 require_once "../DIR.php";
 require_once CONFIG_PATH . "log_config.php";
+require_once SECURISER_PATH . "oauth_config.php";
 
 // Import des services
 require_once SERVICE_CRUD_PATH . "AuthService.php";
@@ -23,6 +24,7 @@ require_once SERVICE_CRUD_PATH . "ErrorLoggingService.php";
 require_once SERVICE_CRUD_PATH . "MistralApiService.php";
 require_once SERVICE_CRUD_PATH . "ApiQuotaService.php"; 
 require_once SERVICE_CRUD_PATH . "AiConversationService.php";
+require_once SERVICE_CRUD_PATH . "SubscriptionService.php";
 
 
 
@@ -43,6 +45,12 @@ function handleAuthService($conn, $action, $data) {
             return $auth->logout($data);
         case 'verifyAdminCode':
             return $auth->verifyAdminCode($data);
+        case 'GoogleAuth':
+            return $auth->initiateGoogleAuth();
+        case 'GoogleCallback':
+            return $auth->handleGoogleCallback($data);
+        case 'GoogleLogin':
+            return $auth->handleGoogleLogin($data);
         default:
             logError("Invalid $action action requested", ['action' => $action]);
             return ['status' => 'error', 'message' => 'Invalid action'];
@@ -410,6 +418,8 @@ function handleMistralApiService($conn, $action, $data) {
     switch ($action) {
         case 'sendChatRequest':
             return $mistralApi->sendChatRequest($data);
+        case 'getModels':
+            return $mistralApi->getModels();
         default:
             logError("Invalid $action action requested", ['action' => $action]);
             return ['status' => 'error', 'message' => 'Invalid action'];
@@ -448,6 +458,38 @@ function handleAiConversationService($conn, $action, $data) {
             return $aiConversation->archiveConversation($data);
         case 'deleteConversation':
             return $aiConversation->deleteConversation($data);
+        default:
+            logError("Invalid $action action requested", ['action' => $action]);
+            return ['status' => 'error', 'message' => 'Invalid action'];
+    }
+}
+
+function handleSubscriptionService($conn, $action, $data) {
+    $subscription = new SubscriptionService($conn);
+    
+    switch ($action) {
+       
+        case 'getAvailablePlans':
+            return $subscription->getAvailablePlans($data);
+        case 'getUserSubscription':
+            return $subscription->getUserSubscription($data);
+        case 'createSubscription':
+            return $subscription->createSubscription($data);
+        case 'cancelSubscription':
+            return $subscription->cancelSubscription($data);
+        case 'canUserUseModel':
+            if (!isset($data['user_id']) || !isset($data['model_name'])) {
+                return [
+                    'status' => 'error',
+                    'message' => "L'ID de l'utilisateur et le nom du modèle sont obligatoires"
+                ];
+            }
+            $result = $subscription->canUserUseModel($data['user_id'], $data['model_name']);
+            return [
+                'status' => 'success',
+                'data' => ['can_use' => $result]
+            ];
+        
         default:
             logError("Invalid $action action requested", ['action' => $action]);
             return ['status' => 'error', 'message' => 'Invalid action'];

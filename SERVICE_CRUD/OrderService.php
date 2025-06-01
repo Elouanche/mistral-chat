@@ -3,10 +3,10 @@
 use Stripe\Price;
 use Stripe\Service\ProductService;
 
-require_once CRUD_PATH . '/OrdersCRUD.php';
-require_once CRUD_PATH . '/OrderItemsCRUD.php';
-require_once CRUD_PATH . '/ProductsCRUD.php';
-require_once CRUD_PATH . '/CartCRUD.php';
+require_once CRUD_PATH . 'OrdersCRUD.php';
+require_once CRUD_PATH . 'OrderItemsCRUD.php';
+require_once CRUD_PATH . 'ProductsCRUD.php';
+require_once CRUD_PATH . 'CartCRUD.php';
 
 /**
  * Service de gestion des commandes

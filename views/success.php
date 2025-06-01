@@ -2,8 +2,7 @@
 
 use PHPUnit\Framework\SyntheticError;
 
-
-
+require_once SHARED_PATH . 'userAcces.php';
 
 // Récupération des paramètres
 $type = $_GET['type'] ?? 'order'; // Type de succès (order, email, etc.)

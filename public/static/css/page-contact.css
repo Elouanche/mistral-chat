@@ -1,29 +1,29 @@
-/* Styles pour la page contact */
+
 .contact-page {
     min-height: 100vh;
-    padding: 2rem;
+    padding: var(--spacing-lg);
 }
 
 .contact-form {
-    max-width: 1000px;
+    max-width: var(--container-max-width);
     margin: auto;
 }
 
 .contact-form form {
     display: flex;
-    gap: 2rem;
+    gap: var(--spacing-lg);
     flex-wrap: wrap;
     flex-direction: row;
 }
 
 .contact-form .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: var(--spacing-md);
 }
 
 .contact-form input,
 .contact-form textarea {
     width: 100%;
-    padding: 0.5rem;
+    padding: var(--spacing-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
 }
@@ -34,11 +34,11 @@
 }
 
 .contact-form button {
-    margin-top: 1rem;
+    margin-top: var(--spacing-md);
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-md)) {
     .contact-form form {
         flex-direction: column;
     }
