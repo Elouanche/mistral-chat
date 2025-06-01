@@ -74,25 +74,14 @@ require_once SHARED_PATH . 'session.php';
                 <button class="close-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="subscribe-form">
-                    <input type="hidden" id="plan-id" name="plan_id">
-                    
-                    <div class="plan-details" id="plan-details">
-                        <!-- Les détails du plan seront chargés dynamiquement ici -->
-                    </div>
-                    
-                    <div class="payment-details">
-                        <h4>Informations de paiement</h4>
-                        <div id="payment-element">
-                            <!-- L'élément de paiement Stripe sera injecté ici -->
-                        </div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="button-secondary close-modal">Annuler</button>
-                        <button type="submit" class="button-primary">Confirmer l'abonnement</button>
-                    </div>
-                </form>
+                <div class="plan-details" id="plan-details">
+                    <!-- Les détails du plan seront chargés dynamiquement ici -->
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="button-secondary close-modal">Annuler</button>
+                    <button type="button" id="proceed-checkout" class="button-primary">Procéder au paiement</button>
+                </div>
             </div>
         </div>
     </div>

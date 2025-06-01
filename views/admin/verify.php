@@ -41,5 +41,5 @@ if (!isset($_SESSION['admin']  ) || $_SESSION['admin'] !== 'pending') {
         <div id="errorMessage" class="error-message" style="display: none;"></div>
     </main>
 
-<script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-verify.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/page-admin-verify.js" defer></script>
 <?php require_once COMPONENT_PATH . "foot.php"; ?>

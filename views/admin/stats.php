@@ -17,6 +17,6 @@ require_once SHARED_PATH . 'admin.php';
         <p>Chargement des statistiques...</p>
     </div>
 </main>
-<script src="<?php echo STATIC_URL; ?>js/admin-stats.js"></script>
+<script src="<?php echo STATIC_URL; ?>js/page-admin-stats.js"></script>
 
 <?php require_once COMPONENT_PATH . "foot.php"; ?>

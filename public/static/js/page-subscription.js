@@ -5,8 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentSubscriptionLoading = document.getElementById('current-subscription-loading');
     const currentSubscriptionContent = document.getElementById('current-subscription-content');
     const subscribeModal = document.getElementById('subscribe-modal');
-    const subscribeForm = document.getElementById('subscribe-form');
-    const planIdInput = document.getElementById('plan-id');
     const planNameSpan = document.getElementById('plan-name');
     const planDetailsDiv = document.getElementById('plan-details');
     const cancelConfirmModal = document.getElementById('cancel-confirm-modal');
@@ -15,20 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
     let plans = [];
     let currentSubscription = null;
-    let stripe = null;
-    let elements = null;
+    let selectedPlanId = null;
     
     // Initialisation
     init();
     
     // Fonctions
     function init() {
-        // Initialiser Stripe si la clé est disponible
-        if (typeof Stripe !== 'undefined') {
-            // Remplacer par la clé publique Stripe réelle
-            stripe = Stripe('pk_test_votreclépublique');
-        }
-        
         // Charger les plans disponibles
         loadPlans();
         
@@ -41,22 +32,16 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
     }
     
-    // Fonction pour fermer toutes les modales
-    function closeAllModals() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.style.display = 'none';
-        });
-    }
-    
     function setupEventListeners() {
         // Fermer les modals
         document.querySelectorAll('.close-modal').forEach(btn => {
             btn.addEventListener('click', closeAllModals);
         });
         
-        // Soumettre le formulaire d'abonnement
-        if (subscribeForm) {
-            subscribeForm.addEventListener('submit', handleSubscribeSubmit);
+        // Bouton pour procéder au checkout
+        const proceedCheckoutBtn = document.getElementById('proceed-checkout');
+        if (proceedCheckoutBtn) {
+            proceedCheckoutBtn.addEventListener('click', handleProceedToCheckout);
         }
         
         // Confirmer l'annulation de l'abonnement
@@ -69,6 +54,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (event.target.classList.contains('modal')) {
                 closeAllModals();
             }
+        });
+    }
+
+    // Fonction pour rediriger vers la page de checkout
+    async function handleProceedToCheckout() {
+        if (!selectedPlanId) return;
+        
+        try {
+            // Rediriger vers la page de checkout avec l'ID du plan
+            window.location.href = `/checkout?plan_id=${selectedPlanId}&type=subscription`;
+        } catch (error) {
+            console.error('Erreur lors de la redirection vers le checkout:', error);
+            alert('Une erreur est survenue. Veuillez réessayer plus tard.');
+        }
+    }
+    
+    function closeAllModals() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.classList.remove('active');
         });
     }
     
@@ -177,12 +181,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const usagePercent = usage.tokens_used && usage.tokens_limit 
             ? Math.min(100, Math.round((usage.tokens_used / usage.tokens_limit) * 100))
             : 0;
-        
+
         // Formater les dates
-        const startDate = new Date(currentSubscription.start_date);
-        const endDate = new Date(currentSubscription.end_date);
+        const startDate = new Date(currentSubscription.started_at);
         const formattedStartDate = startDate.toLocaleDateString('fr-FR');
-        const formattedEndDate = endDate.toLocaleDateString('fr-FR');
+        
+        // Gérer la date d'expiration
+        let formattedEndDate;
+        if (!currentSubscription.expires_at || currentSubscription.expires_at === '0000-00-00 00:00:00') {
+            formattedEndDate = 'Illimité';
+        } else {
+            const endDate = new Date(currentSubscription.expires_at);
+            formattedEndDate = endDate.toLocaleDateString('fr-FR');
+        }
         
         currentSubscriptionContent.innerHTML = `
             <div class="subscription-info">
@@ -213,8 +224,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="meter-fill" style="width: ${usagePercent}%"></div>
                     </div>
                     <div class="meter-labels">
-                        <span>${usage.tokens_used.toLocaleString()} utilisés</span>
-                        <span>${usage.tokens_remaining.toLocaleString()} restants</span>
+                        <span>${usage.tokens_used ? usage.tokens_used.toLocaleString() : 0} utilisés</span>
+                        <span>${usage.tokens_remaining ? usage.tokens_remaining.toLocaleString() : 0} restants</span>
                     </div>
                 </div>
             </div>
@@ -234,13 +245,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function openSubscribeModal(planId, planName) {
         if (!subscribeModal) return;
         
+        // Stocker l'ID du plan sélectionné
+        selectedPlanId = planId;
+        
         // Mettre à jour les informations du plan
-        planIdInput.value = planId;
         planNameSpan.textContent = planName;
         
         // Trouver le plan sélectionné
         const selectedPlan = plans.find(p => p.id == planId);
         if (!selectedPlan) return;
+        
+        // Préparer l'affichage de la limite de tokens
+        const tokenLimit = selectedPlan.token_limit 
+            ? `${selectedPlan.token_limit.toLocaleString()} tokens par mois`
+            : `${selectedPlan.max_messages_per_day || 0} messages par jour`;
         
         // Afficher les détails du plan
         planDetailsDiv.innerHTML = `
@@ -250,23 +268,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="plan-price">${parseFloat(selectedPlan.price).toFixed(2)} €/mois</span>
             </div>
             <p class="plan-description">${selectedPlan.description || 'Aucune description disponible'}</p>
-            <p>Limite de tokens: ${selectedPlan.token_limit.toLocaleString()} par mois</p>
+            <p>Limite d'utilisation: ${tokenLimit}</p>
         `;
-        
-        // Si le plan est gratuit, pas besoin d'afficher l'élément de paiement
-        const paymentDetails = document.querySelector('.payment-details');
-        if (parseFloat(selectedPlan.price) <= 0) {
-            paymentDetails.style.display = 'none';
-        } else {
-            paymentDetails.style.display = 'block';
-            
-            // Initialiser l'élément de paiement Stripe si disponible
-            if (stripe && elements === null) {
-                elements = stripe.elements();
-                const paymentElement = elements.create('card');
-                paymentElement.mount('#payment-element');
-            }
-        }
         
         // Afficher le modal
         subscribeModal.classList.add('active');
@@ -277,137 +280,77 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelConfirmModal.classList.add('active');
     }
     
-    async function handleSubscribeSubmit(event) {
-        event.preventDefault();
+    function renderCurrentSubscription() {
+        if (!currentSubscriptionContent || !currentSubscription) return;
         
-        const planId = planIdInput.value;
-        if (!planId) return;
+        const plan = currentSubscription.plan || {};
+        const usage = currentSubscription.usage || {};
         
-        const selectedPlan = plans.find(p => p.id == planId);
-        if (!selectedPlan) return;
+        // Calculer le pourcentage d'utilisation
+        const usagePercent = usage.tokens_used && usage.tokens_limit 
+            ? Math.min(100, Math.round((usage.tokens_used / usage.tokens_limit) * 100))
+            : 0;
+
+        // Formater les dates
+        const startDate = new Date(currentSubscription.started_at);
+        const formattedStartDate = startDate.toLocaleDateString('fr-FR');
         
-        // Désactiver le formulaire pendant l'envoi
-        const submitBtn = subscribeForm.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Traitement en cours...';
-        
-        try {
-            // Si le plan est gratuit, pas besoin de paiement
-            if (parseFloat(selectedPlan.price) <= 0) {
-                await createSubscription(planId);
-                return;
-            }
-            
-            // Sinon, traiter le paiement avec Stripe
-            if (!stripe || !elements) {
-                throw new Error('Le système de paiement n\'est pas disponible.');
-            }
-
-            // Créer d'abord l'intention de paiement côté serveur
-            const paymentIntentContext = {
-                service: 'Payment',
-                action: 'createPaymentIntent',
-                data: {
-                    amount: selectedPlan.price * 100, // Convertir en centimes pour Stripe
-                    currency: 'eur',
-                    payment_method_types: ['card'],
-                    metadata: {
-                        plan_id: planId,
-                        plan_name: selectedPlan.name
-                    }
-                }
-            };
-
-            const paymentIntentResult = await postData(paymentIntentContext);
-            
-            if (paymentIntentResult.status !== 'success' || !paymentIntentResult.data.client_secret) {
-                throw new Error(paymentIntentResult.message || 'Erreur lors de la création de l\'intention de paiement');
-            }
-
-            // Confirmer le paiement avec Stripe
-            const { error: stripeError } = await stripe.confirmCardPayment(
-                paymentIntentResult.data.client_secret,
-                {
-                    payment_method: {
-                        card: elements.getElement('card'),
-                        billing_details: {
-                            email: document.getElementById('user_email')?.value
-                        }
-                    }
-                }
-            );
-
-            if (stripeError) {
-                throw new Error(stripeError.message);
-            }
-
-            // Si le paiement est réussi, créer l'abonnement
-            await createSubscription(planId);
-            
-            // Afficher un message de succès
-            showNotification('Paiement traité avec succès', 'success');
-            closeAllModals();
-            loadCurrentSubscription();
-
-        } catch (error) {
-            console.error('Erreur:', error);
-            showNotification(error.message || 'Une erreur est survenue lors du traitement du paiement', 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirmer l\'abonnement';
-        }
-    }
-
-    // Ajouter cette fonction d'aide pour les notifications
-    function showNotification(message, type = 'info') {
-        if (typeof Toastify === 'function') {
-            Toastify({
-                text: message,
-                duration: 3000,
-                gravity: 'top',
-                position: 'right',
-                backgroundColor: type === 'error' ? '#ff4444' : 
-                               type === 'success' ? '#00C851' : 
-                               '#33b5e5'
-            }).showToast();
+        // Gérer la date d'expiration
+        let formattedEndDate;
+        if (!currentSubscription.expires_at || currentSubscription.expires_at === '0000-00-00 00:00:00') {
+            formattedEndDate = 'Illimité';
         } else {
-            alert(message);
+            const endDate = new Date(currentSubscription.expires_at);
+            formattedEndDate = endDate.toLocaleDateString('fr-FR');
         }
+        
+        currentSubscriptionContent.innerHTML = `
+            <div class="subscription-info">
+                <div class="subscription-details">
+                    <h3>Votre abonnement actuel</h3>
+                    <div class="subscription-meta">
+                        <div class="subscription-meta-item">
+                            <span class="meta-label">Plan</span>
+                            <span class="meta-value">${plan.name || 'Non spécifié'}</span>
+                        </div>
+                        <div class="subscription-meta-item">
+                            <span class="meta-label">Statut</span>
+                            <span class="meta-value">${currentSubscription.status === 'active' ? 'Actif' : 'Inactif'}</span>
+                        </div>
+                        <div class="subscription-meta-item">
+                            <span class="meta-label">Période</span>
+                            <span class="meta-value">${formattedStartDate} - ${formattedEndDate}</span>
+                        </div>
+                    </div>
+                    <div class="subscription-actions">
+                        <button id="change-plan-btn" class="button-secondary">Changer de plan</button>
+                        <button id="cancel-subscription-btn" class="button-danger">Annuler l'abonnement</button>
+                    </div>
+                </div>
+                <div class="usage-meter">
+                    <h4>Utilisation des tokens ce mois-ci</h4>
+                    <div class="meter-container">
+                        <div class="meter-fill" style="width: ${usagePercent}%"></div>
+                    </div>
+                    <div class="meter-labels">
+                        <span>${usage.tokens_used ? usage.tokens_used.toLocaleString() : 0} utilisés</span>
+                        <span>${usage.tokens_remaining ? usage.tokens_remaining.toLocaleString() : 0} restants</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Ajouter les écouteurs d'événements
+        document.getElementById('change-plan-btn').addEventListener('click', function() {
+            // Faire défiler jusqu'à la section des plans
+            document.querySelector('.plans-comparison').scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        document.getElementById('cancel-subscription-btn').addEventListener('click', function() {
+            openCancelConfirmModal();
+        });
     }
     
-    function createSubscription(planId) {
-        const submitBtn = subscribeForm.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Traitement en cours...';
-
-        const context = {
-            service: 'Subscription',
-            action: 'createSubscription', // Changé de 'create' à 'createSubscription'
-            data: {
-                plan_id: planId
-            }
-        };
-
-        postData(context)
-            .then(data => {
-                if (data.status === 'success') {
-                    closeAllModals();
-                    loadCurrentSubscription();
-                    alert('Abonnement créé avec succès!');
-                } else {
-                    alert(data.message || 'Erreur lors de la création de l\'abonnement');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Une erreur est survenue lors de la création de l\'abonnement');
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Confirmer l\'abonnement';
-            });
-    }
-
     function handleCancelSubscription() {
         const context = {
             service: 'Subscription',
@@ -431,9 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erreur:', error);
                 alert('Une erreur est survenue lors de l\'annulation de l\'abonnement');
             });
-    }
-
-    function loadCurrentSubscription() {
+    }    function loadCurrentSubscription() {
         if (!currentSubscriptionContent) return;
         if (!currentUserId) {
             currentSubscriptionContent.innerHTML = `
@@ -458,10 +399,9 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         postData(context)
-            .then(data => {
-                if (data.status === 'success') {
-                    if (data.data && data.data.data) {
-                        currentSubscription = data.data.data;
+            .then(data => {                if (data.status === 'success') {
+                    if (data.data) {
+                        currentSubscription = data.data;
                         renderCurrentSubscription();
                     } else {
                         currentSubscriptionContent.innerHTML = `

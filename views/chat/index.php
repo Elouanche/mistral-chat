@@ -1,4 +1,3 @@
-
 <?php
 require_once SHARED_PATH . 'userAcces.php';
 ?>
@@ -14,6 +13,9 @@ require_once SHARED_PATH . 'userAcces.php';
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
     <main class="chat-container">
+        <button id="toggle-sidebar" class="button-icon" title="Afficher/Masquer les conversations">
+            <i class="fas fa-bars"></i>
+        </button>
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>Conversations</h2>
@@ -169,8 +171,18 @@ require_once SHARED_PATH . 'userAcces.php';
         </div>
     </div>
 
+    <!-- Définir l'ID utilisateur pour JavaScript -->
+    <script>
+        const userId = <?php echo $userId; ?>;
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
     <script src="<?php echo STATIC_URL; ?>js/page-chat.js"></script>
     
-<?php require_once COMPONENT_PATH . 'foot.php'; ?>
+    </body>
+
+    <script src="<?= htmlspecialchars(STATIC_URL); ?>js/scripts-notification.js" defer></script>
+    <script src="<?= htmlspecialchars(STATIC_URL); ?>js/postData.js" defer></script>
+    <script src="<?= htmlspecialchars(STATIC_URL); ?>js/prepaForms.js" defer></script>
+    
+</html>

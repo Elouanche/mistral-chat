@@ -1,104 +1,113 @@
 // Variables globales qui seront définies dans la page checkout.php
-let cartData = [];
-let checkoutUserId = null;
+let stripe = null;
+let elements = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Récupérer les données du panier depuis la variable globale définie dans la page PHP
-    cartData = window.cartData || [];
-    checkoutUserId = window.checkoutUserId || null;
+    // Initialiser Stripe avec la clé publique
+    stripe = Stripe(stripePublicKey);
+      initialize();
+    checkStatus();
     
-    // Préparer les données du panier pour le formulaire
-    const cartDataInput = document.getElementById('cart-data');
-    if (cartDataInput) {
-        cartDataInput.value = JSON.stringify(cartData);
-    }
-
-    // Ajouter l'écouteur d'événement au formulaire de paiement
-    const checkoutForm = document.getElementById('checkoutForm');
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Récupérer l'ID utilisateur depuis la variable globale définie dans la page
-            createOrder(checkoutUserId);
-        });
-    }
+    // Ajouter l'écouteur d'événements pour le formulaire
+    document
+        .querySelector("#payment-form")
+        .addEventListener("submit", handleSubmit);
 });
 
-/**
- * Crée une commande avec les informations du formulaire
- * @param {number|null} userId - L'ID de l'utilisateur connecté ou null
- */
-async function createOrder(userId) {
-    // Construire l'objet de données avec les informations d'expédition
-    const data = {
-        shipping_info: {
-            street: document.getElementById('shipping_street').value,
-            city: document.getElementById('shipping_city').value,
-            state: document.getElementById('shipping_state').value,
-            postal_code: document.getElementById('shipping_postal_code').value,
-            country: document.getElementById('shipping_country').value
-        }
-    };
-
-    // Récupérer et traiter les articles du panier
-    const cartItemElements = document.querySelectorAll('.cart-item');
-    const items = [];
-    let totalAmount = 0;
-
-    cartItemElements.forEach(item => {
-        const productId = parseInt(item.getAttribute('data-product-id'), 10);
-        const priceElement = item.querySelector('.price');
-        const quantityElement = item.querySelector('.quantity-info');
-
-        if (!priceElement || !quantityElement) return;
-
-        const priceText = priceElement.textContent;
-        const price = parseFloat(priceText.replace('Prix :', '').replace('€', '').trim());
-
-        const quantityText = quantityElement.textContent;
-        const quantity = parseInt(quantityText.replace('Quantité :', '').trim(), 10);
-        
-        if (!isNaN(price) && !isNaN(quantity)) {
-            const itemTotal = price * quantity;
-            totalAmount += itemTotal;
-
-            items.push({
-                product_id: productId,
-                quantity: quantity,
-                price: price
-            });
+async function initialize() {
+    // Utiliser postData au lieu de fetch
+    const response = await postData( {
+        service: 'Payment',
+        action: 'createPaymentIntent',
+        data: {
+            checkout_type: checkoutType,
+            plan_id: planId || null,
+            amount: total
         }
     });
 
-    // Ajouter les articles et le montant total
-    data.items = items;
-    data.total_amount = totalAmount;
+    if (response && response.clientSecret) {
+        elements = stripe.elements({ clientSecret: response.clientSecret });
+        const paymentElement = elements.create("payment");
+        paymentElement.mount("#payment-element");
+    } else {
+        showMessage("Erreur lors de l'initialisation du paiement");
+    }
+}
 
-    // Ajouter les informations utilisateur
-    const userEmailElement = document.getElementById('user_email');
-    const phoneElement = document.getElementById('phone');
+async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+            return_url: `${window.location.origin}/success`,
+            payment_method_data: {
+                billing_details: {
+                    email: userEmail || ''
+                }
+            }
+        },
+    });    if (error) {
+        if (error.type === "card_error" || error.type === "validation_error") {
+            showMessage(error.message);
+        } else {
+            showMessage("Une erreur inattendue s'est produite.");
+        }
+    }
     
-    if (userEmailElement && phoneElement) {
-        data.email = userEmailElement.value;
-        data.phone = phoneElement.value;
+    setLoading(false);
+}
+
+async function checkStatus() {
+    const clientSecret = new URLSearchParams(window.location.search).get(
+        "payment_intent_client_secret"
+    );
+    
+    if (!clientSecret) {
+        return;
     }
-
-    if (userId) {
-        data.user_id = userId;
+    
+    const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+    
+    switch (paymentIntent.status) {
+        case "succeeded":
+            showMessage("Le paiement a réussi!");
+            break;
+        case "processing":
+            showMessage("Votre paiement est en cours de traitement.");
+            break;
+        case "requires_payment_method":
+            showMessage("Votre paiement n'a pas réussi, veuillez réessayer.");
+            break;
+        default:
+            showMessage("Une erreur s'est produite.");
+            break;
     }
+}
 
-    // Préparer le contexte pour l'appel API
-    const context = {
-        service: "Order",
-        action: "createOrder",
-        data: data
-    };
+function showMessage(messageText) {
+    const messageContainer = document.querySelector("#payment-message");
+    messageContainer.classList.remove("hidden");
+    messageContainer.textContent = messageText;
+    setTimeout(function () {
+        messageContainer.classList.add("hidden");
+        messageText.textContent = "";
+    }, 4000);
+}
 
-    try {
-        console.log('Données à envoyer:', context);
-        
-        const result = await postData(context);
-        console.log('Réponse API:', result);
+function setLoading(isLoading) {
+    if (isLoading) {
+        document.querySelector("#submit").disabled = true;
+        document.querySelector("#spinner").classList.remove("hidden");
+        document.querySelector("#button-text").classList.add("hidden");
+    } else {
+        document.querySelector("#submit").disabled = false;
+        document.querySelector("#spinner").classList.add("hidden");
+        document.querySelector("#button-text").classList.remove("hidden");
+    }
+}
         
         if (result.status === 'error') {
             showNotification(result.message || 'Erreur lors de la création de la commande', 'error');

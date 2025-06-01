@@ -84,6 +84,6 @@ $products = makeApiRequest('AdminProduct', 'getAllProducts');
     </section>
 </main>
 
-<script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-inventory.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/page-admin-inventory.js" defer></script>
 
 <?php require_once COMPONENT_PATH . 'foot.php'; ?>

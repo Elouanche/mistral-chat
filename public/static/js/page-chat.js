@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const welcomeNewChatBtn = document.getElementById('welcome-new-chat-btn');
     const showArchivedCheckbox = document.getElementById('show-archived');
     const modelsGrid = document.getElementById('models-grid');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const sidebar = document.querySelector('.sidebar');
     const newChatModal = document.getElementById('new-chat-modal');
     const newChatForm = document.getElementById('new-chat-form');
     const chatModelSelect = document.getElementById('chat-model');
@@ -88,6 +90,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 closeAllModals();
             }
         });
+        
+        // Toggle sidebar sur mobile
+        toggleSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+        
+        // Fermer la sidebar sur mobile quand on clique en dehors
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !toggleSidebarBtn.contains(e.target) && 
+                sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
     }
     
     function loadModels() {
@@ -155,21 +172,33 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = model.display_name;
             chatModelSelect.appendChild(option);
         });
-    }
-    
-    function loadConversations() {
+    }    function loadConversations() {
         conversationsLoading.style.display = 'flex';
         
         const includeArchived = showArchivedCheckbox.checked;
         
-        fetch(`/api/ai/conversations?include_archived=${includeArchived}`)
-            .then(response => response.json())
+        const context = {
+            service: 'AiConversation',
+            action: 'getUserConversations',
+            data: {
+                include_archived: includeArchived
+            }
+        };
+        
+        postData(context)
             .then(data => {
-                conversations = data.data || [];
-                renderConversations();
+                // S'assurer que conversations est toujours un tableau
+                if (data.status === 'success') {
+                    conversations = Array.isArray(data.data) ? data.data : [];
+                    renderConversations();
+                } else {
+                    conversations = [];
+                    console.error('Erreur:', data.message || 'Erreur inattendue');
+                }
                 conversationsLoading.style.display = 'none';
             })
             .catch(error => {
+                conversations = [];
                 console.error('Erreur lors du chargement des conversations:', error);
                 conversationsLoading.style.display = 'none';
             });
@@ -260,10 +289,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="spinner"></div>
             </div>
         `;
+          // Charger les détails de la conversation et ses messages
+        const context = {
+            service: 'AiConversation',
+            action: 'getConversation',
+            data: {
+                conversation_id: conversationId
+            }
+        };
         
-        // Charger les détails de la conversation et ses messages
-        fetch(`/api/ai/conversation?conversation_id=${conversationId}`)
-            .then(response => response.json())
+        postData(context)
             .then(data => {
                 if (data.status === 'success') {
                     const conversation = data.data;
@@ -346,14 +381,17 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('send-btn').disabled = true;
         
         showUserMessage(message);
-        showLoadingMessage();
-
+        showLoadingMessage();          
         const context = {
             service: 'MistralApi',
             action: 'sendChatRequest',
             data: {
+                user_id: userId,
                 conversation_id: currentConversationId,
-                message: message,
+                messages: [{
+                    role: 'user',
+                    content: message
+                }],
                 model_id: currentModelId
             }
         };
@@ -463,23 +501,21 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Le titre ne peut pas être vide.');
             return;
         }
-        
-        // Désactiver le formulaire pendant l'envoi
+          // Désactiver le formulaire pendant l'envoi
         const submitBtn = editTitleForm.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         
-        fetch('/api/ai/conversation/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        const context = {
+            service: 'AiConversation',
+            action: 'updateConversation',
+            data: {
                 conversation_id: currentConversationId,
                 title: newTitle
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+            }
+        };
+        
+        postData(context)
+            .then(data => {
             if (data.status === 'success') {
                 // Mettre à jour le titre dans l'interface
                 conversationTitle.textContent = newTitle;
@@ -514,20 +550,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const confirmMessage = isArchived 
             ? 'Voulez-vous vraiment désarchiver cette conversation ?' 
             : 'Voulez-vous vraiment archiver cette conversation ?';
+          if (!confirm(confirmMessage)) return;
         
-        if (!confirm(confirmMessage)) return;
-        
-        fetch(`/api/ai/conversation/${action}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        const context = {
+            service: 'AiConversation',
+            action: isArchived ? 'unarchiveConversation' : 'archiveConversation',
+            data: {
                 conversation_id: currentConversationId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+            }
+        };
+        
+        postData(context)
+            .then(data => {
             if (data.status === 'success') {
                 // Mettre à jour le bouton d'archivage
                 updateArchiveButton(!isArchived);
@@ -558,21 +592,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!currentConversationId) return;
         deleteConfirmModal.classList.add('active');
     }
-    
-    function handleDeleteConversation() {
+      function handleDeleteConversation() {
         if (!currentConversationId) return;
         
-        fetch('/api/ai/conversation/delete', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        const context = {
+            service: 'AiConversation',
+            action: 'deleteConversation',
+            data: {
                 conversation_id: currentConversationId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
+            }
+        };
+        
+        postData(context)
+            .then(data => {
             if (data.status === 'success') {
                 // Fermer le modal
                 closeAllModals();
@@ -603,5 +635,107 @@ document.addEventListener('DOMContentLoaded', function() {
     function adjustTextareaHeight() {
         chatInput.style.height = 'auto';
         chatInput.style.height = (chatInput.scrollHeight) + 'px';
+    }
+
+    // Fonctions d'affichage des messages
+    function showUserMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message user';
+        messageElement.innerHTML = `
+            <div class="content">${message}</div>
+            <div class="timestamp">${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+        `;
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showAssistantMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message assistant';
+        messageElement.innerHTML = `
+            <div class="content">${marked.parse(message)}</div>
+            <div class="timestamp">${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+        `;
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        // Appliquer la coloration syntaxique aux blocs de code
+        messageElement.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    }
+
+    function showLoadingMessage() {
+        const loadingElement = document.createElement('div');
+        loadingElement.className = 'message assistant loading';
+        loadingElement.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+            </div>
+        `;
+        messagesContainer.appendChild(loadingElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function removeLoadingMessage() {
+        const loadingMessage = messagesContainer.querySelector('.message.loading');
+        if (loadingMessage) {
+            loadingMessage.remove();
+        }
+    }
+
+    function showErrorMessage(message) {
+        const errorElement = document.createElement('div');
+        errorElement.className = 'message error';
+        errorElement.innerHTML = `
+            <div class="content">${message}</div>
+            <div class="timestamp">${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+        `;
+        messagesContainer.appendChild(errorElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function showNotification(message, type = 'info') {
+        // Créer l'élément de notification s'il n'existe pas
+        let notification = document.getElementById('chat-notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'chat-notification';
+            document.body.appendChild(notification);
+            
+            // Styles de base
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.padding = '15px 20px';
+            notification.style.borderRadius = '5px';
+            notification.style.color = 'white';
+            notification.style.fontWeight = 'bold';
+            notification.style.zIndex = '1000';
+            notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        }
+    
+        // Définir la couleur selon le type
+        switch (type) {
+            case 'success':
+                notification.style.backgroundColor = '#4CAF50';
+                break;
+            case 'error':
+                notification.style.backgroundColor = '#F44336';
+                break;
+            case 'warning':
+                notification.style.backgroundColor = '#FF9800';
+                break;
+            default:
+                notification.style.backgroundColor = '#2196F3';
+        }
+        
+        notification.textContent = message;
+        notification.style.display = 'block';
+        
+        // Masquer après 3 secondes
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
     }
 });

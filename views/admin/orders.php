@@ -136,6 +136,6 @@ $possibleStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled
 <script id="ordersData" type="application/json"><?= json_encode($orders, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 
 <!-- Scripts -->
-<script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-orders.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/page-admin-orders.js" defer></script>
 
 <?php require_once COMPONENT_PATH . 'foot.php'; ?>

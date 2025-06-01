@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const context = {
-            service: 'AI',
+            service: 'MistralApi',
             action: 'getModels'
         };
 
@@ -55,10 +55,15 @@ document.addEventListener('DOMContentLoaded', function() {
             badgeClass = 'badge-standard';
             badgeText = 'Standard';
         }
-        
+          // Formatage du nom du modèle pour l'affichage
+        const displayName = model.model_name
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
         card.innerHTML = `
             <div class="model-header">
-                <h3>${model.display_name}</h3>
+                <h3>${displayName}</h3>
                 <span class="model-badge ${badgeClass}">${badgeText}</span>
             </div>
             <div class="model-body">

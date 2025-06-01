@@ -94,7 +94,7 @@ require_once SHARED_PATH . 'session.php';
     
     <?php require_once COMPONENT_PATH . 'footer.php'; ?>
     
-    <script src="<?php echo STATIC_URL; ?>js/home.js"></script>
+    <script src="<?php echo STATIC_URL; ?>js/page-home.js"></script>
 </body>
 </html>
 

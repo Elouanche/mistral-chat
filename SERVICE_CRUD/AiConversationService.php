@@ -75,12 +75,8 @@ class AiConversationService {
 
                 $conversation['last_message'] = $lastMessage;
                 
-                // Compter le nombre de messages
-                $conversationId = $data['conversation_id'];
-                
-                // Mettre à jour ou créer le message système
-               
-                $filters = ['conversation_id' => $conversationId];
+                // Compter le nombre de messages en utilisant l'ID de la conversation courante
+                $filters = ['conversation_id' => $conversation['id']];
                 $options = ['order_by' => ['created_at' => 'ASC']];
                 
                 $messages =  $this->messagesCRUD->get(['*'], $filters, $options);

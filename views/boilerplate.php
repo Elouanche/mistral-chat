@@ -552,9 +552,11 @@
 </main>
 
 <!-- Scripts JavaScript -->
-<script src="<?= STATIC_URL; ?>js/scripts-carrousel.js" defer></script>
-<script src="<?= STATIC_URL; ?>js/scripts-gallery.js" defer></script>
-<script src="<?= STATIC_URL; ?>js/scripts-products.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/scripts-header.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/scripts-gallery.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/scripts-carrousel.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/scripts-products.js" defer></script>
+
 <script>
     // Attendre que le DOM et tous les scripts soient chargés
     document.addEventListener('DOMContentLoaded', function() {

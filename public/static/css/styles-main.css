@@ -160,6 +160,7 @@ body {
     align-items: center;
     min-height: 100vh;
     overflow-x: hidden;
+    gap: var(--spacing-block-xs);
 }
 
 /* Typography */
@@ -377,7 +378,6 @@ form {
     border-radius: 8px;
     box-shadow: var(--shadow-md);
     margin: var(--spacing-xl);
-    width: 100%;
 }
 
 .form-group {
@@ -442,7 +442,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .btn:hover, button:hover, input[type="submit"]:hover, .button-spe:hover {
-    background-color: var(--color-text);
+    background-color: var(--color-white);
     color: var(--color-black);
 }
 

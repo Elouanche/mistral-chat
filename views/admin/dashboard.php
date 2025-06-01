@@ -149,6 +149,6 @@ function renderForm($id, $title, $fields, $submitText) {
 </main>
 
 <script src="<?= htmlspecialchars(STATIC_URL); ?>js/postData.js"></script>
-<script src="<?= htmlspecialchars(STATIC_URL); ?>js/admin-dashboard.js" defer></script>
+<script src="<?= htmlspecialchars(STATIC_URL); ?>js/page-admin-dashboard.js" defer></script>
 
 <?php require_once COMPONENT_PATH . 'foot.php'; ?>

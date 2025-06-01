@@ -58,13 +58,10 @@ class SubscriptionService {
                     'status' => 'error',
                     'message' => "L'ID de l'utilisateur est obligatoire"
                 ];
-            }
-            
-            // Récupérer l'abonnement actif
+            }            // Récupérer l'abonnement actif
             $subscriptions = $this->userSubscriptionsCRUD->get(['*'], [
                 'user_id' => $data['user_id'],
-                'status' => 'active',
-                'expires_at > NOW()' => null
+                'status' => 'active'
             ]);
             
             if (empty($subscriptions)) {
@@ -93,13 +90,17 @@ class SubscriptionService {
                     'usage_date <' => $nextMonth
                 ]
             );
+              $tokensUsed = !empty($usage) ? (int)$usage[0]['total_tokens'] : 0;
             
-            $tokensUsed = !empty($usage) ? (int)$usage[0]['total_tokens'] : 0;
+            // Pour un plan gratuit, utiliser max_messages_per_day comme limite de base
+            $tokensLimit = isset($plan['token_limit']) ? $plan['token_limit'] : ($plan['max_messages_per_day'] * 100);
             
             $subscription['usage'] = [
                 'tokens_used' => $tokensUsed,
-                'tokens_limit' => $plan['token_limit'],
-                'tokens_remaining' => max(0, $plan['token_limit'] - $tokensUsed)
+                'tokens_limit' => $tokensLimit,
+                'tokens_remaining' => max(0, $tokensLimit - $tokensUsed),
+                'max_messages_per_day' => $plan['max_messages_per_day'],
+                'max_conversations' => $plan['max_conversations']
             ];
             
             return [
@@ -143,11 +144,12 @@ class SubscriptionService {
                     'user_id' => $data['user_id'],
                     'status' => 'active'
                 ]
-            );
-            
-            // Créer le nouvel abonnement
+            );            // Créer le nouvel abonnement
             $startedAt = date('Y-m-d H:i:s');
-            $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $plan['duration_days'] . ' days'));
+            // Par défaut, les plans gratuits n'expirent pas (NULL), les plans payants durent 30 jours
+            $expiresAt = (floatval($plan['price']) > 0) 
+                ? date('Y-m-d H:i:s', strtotime('+30 days'))
+                : null;
             
             $subscriptionId = $this->userSubscriptionsCRUD->insert([
                 'user_id' => $data['user_id'],

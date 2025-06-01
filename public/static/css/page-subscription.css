@@ -1,5 +1,3 @@
-
-
 /* Layout principal */
 .subscription-container {
     max-width: var(--container-max-width);
@@ -67,7 +65,7 @@
 
 .meta-label {
     font-size: 0.9rem;
-    color: var(--light-text);
+    color: var(--color-text-highlight);
     margin-bottom: 5px;
 }
 
@@ -114,7 +112,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 0.9rem;
-    color: var(--light-text);
+    color: var(--color-text-highlight);
 }
 
 /* Grille des plans */
@@ -137,7 +135,7 @@
 }
 
 .plan-card {
-    background-color: var(--background-color);
+    background-color: var(--color-background);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     padding: 30px;
@@ -173,7 +171,7 @@
     text-align: center;
     margin-bottom: 20px;
     padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .plan-name {
@@ -196,7 +194,7 @@
 
 .plan-price .period {
     font-size: 1rem;
-    color: var(--light-text);
+    color: var(--color-text-highlight);
     font-weight: normal;
 }
 
@@ -246,7 +244,7 @@
 }
 
 .faq-item {
-    background-color: var(--background-color);
+    background-color: var(--color-background);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     padding: 20px;
@@ -260,13 +258,13 @@
 
 .faq-item p {
     margin: 0;
-    color: var(--light-text);
+    color: var(--color-text-highlight);
     line-height: 1.5;
 }
 
 /* Modals */
 .modal {
-    display: none;
+    display: flex;
     position: fixed;
     top: 0;
     left: 0;
@@ -276,14 +274,18 @@
     z-index: 1000;
     justify-content: center;
     align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal.active {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
 }
 
 .modal-content {
-    background-color: var(--background-color);
+    background-color: var(--color-background);
     border-radius: var(--border-radius);
     width: 100%;
     max-width: 500px;
@@ -293,7 +295,7 @@
 
 .modal-header {
     padding: 15px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -314,14 +316,14 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: var(--light-text);
+    color: var(--color-text-highlight);
 }
 
 /* Plan details in modal */
 .plan-details {
     margin-bottom: 20px;
     padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .plan-details h4 {
@@ -345,7 +347,7 @@
 }
 
 .plan-description {
-    color: var(--light-text);
+    color: var(--color-text-highlight);
     margin-bottom: 15px;
 }
 
@@ -365,7 +367,7 @@
 .form-group select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     font-size: 1rem;
     transition: var(--transition);
@@ -384,50 +386,51 @@
     margin-top: 20px;
 }
 
-/* Boutons */
+/* Styles des boutons */
 .button-primary {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--color-white);
     border: none;
-    border-radius: var(--border-radius);
-    padding: 10px 15px;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-bold);
     cursor: pointer;
-    font-size: 1rem;
-    transition: var(--transition);
+    transition: var(--transition-base);
 }
 
 .button-primary:hover {
-    background-color: var(--primary-hover);
+    background-color: var(--color-primary-hover);
 }
 
 .button-secondary {
-    background-color: transparent;
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 10px 15px;
+    background-color: var(--color-secondary);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-bold);
     cursor: pointer;
-    font-size: 1rem;
-    transition: var(--transition);
+    transition: var(--transition-base);
 }
 
 .button-secondary:hover {
-    background-color: var(--secondary-color);
+    background-color: var(--color-gray-100);
 }
 
-.button-danger {
-    background-color: var(--danger-color);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius);
-    padding: 10px 15px;
+.btn {
+    display: inline-block;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
     cursor: pointer;
-    font-size: 1rem;
-    transition: var(--transition);
+    transition: var(--transition-base);
+    background-color: var(--color-primary);
+    color: var(--color-white);
 }
 
-.button-danger:hover {
-    background-color: #bd2130;
+.btn:hover {
+    background-color: var(--color-primary-hover);
 }
 
 /* Loading spinner */
