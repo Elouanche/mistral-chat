@@ -5,11 +5,10 @@ use PHPUnit\Framework\SyntheticError;
 require_once SHARED_PATH . 'userAcces.php';
 
 // Récupération des paramètres
-$type = $_GET['type'] ?? 'order'; // Type de succès (order, email, etc.)
+$type = $_GET['type'] ?? 'order'; // Type de succès (order, subscription, etc.)
 $orderId = $_GET['order_id'] ?? null;
 
 if ($orderId) {
-    
     // 1. Vérifier le statut du paiement
     $data = ['order_id' => $orderId];
     $paymentDetails = makeApiRequest('Payment', 'processPayment', $data);
@@ -19,42 +18,57 @@ if ($orderId) {
         $paymentStatus = $paymentDetails['data']['payment_status'] ?? null;
         
         if ($paymentStatus === 'Completed') {
-            // 2. Mettre à jour le statut de la commande
-            $orderData = ['order_id' => $orderId, 'status' => 'Paid'];
-            $orderResult = makeApiRequest('Order', 'updateOrderStatus', $orderData);
-
-            if ($orderResult['status'] === 'success') {
-                // 3. Envoyer l'email de confirmation
-                $emailData = [
-                    'type' => 'order_confirmation',
-                    'order_id' => $orderId,
-                    'to' => $_SESSION['user_email'],
-                    'username' => $_SESSION['user_username'],
-                    'base_url' => ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST']
+            // Gérer le succès selon le type
+            if ($type === 'subscription' && isset($_GET['plan_id'])) {
+                // Activer l'abonnement
+                $subscriptionData = [
+                    'user_id' => $_SESSION['user_id'],
+                    'plan_id' => $_GET['plan_id']
                 ];
-                $emailResult = makeApiRequest('Notification', 'sendEmail', ['email_data' => $emailData]);
+                $subscriptionResult = makeApiRequest('Subscription', 'createSubscription', $subscriptionData);
+                
+                if ($subscriptionResult['status'] !== 'success') {
+                    logError("Erreur lors de l'activation de l'abonnement", $subscriptionResult);
+                }
+            } else {
+                // Mettre à jour le statut de la commande
+                $orderData = ['order_id' => $orderId, 'status' => 'Paid'];
+                $orderResult = makeApiRequest('Order', 'updateOrderStatus', $orderData);
 
-                
-                // 4. Vider le panier
-                $cartData = [
-                    'user_id' => $_SESSION['user_id'] ?? null,
-                    'cart_id' => $_SESSION['cart_id'] ?? null
-                ];
-                makeApiRequest('Cart', 'clearCart', $cartData);
-                
-            } 
-        }else {
+                if ($orderResult['status'] === 'success') {
+                    // Envoyer l'email de confirmation
+                    $emailData = [
+                        'type' => 'order_confirmation',
+                        'order_id' => $orderId,
+                        'to' => $_SESSION['user_email'],
+                        'username' => $_SESSION['user_username'],
+                        'base_url' => ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST']
+                    ];
+                    $emailResult = makeApiRequest('Notification', 'sendEmail', ['email_data' => $emailData]);
+
+                    // Vider le panier
+                    $cartData = [
+                        'user_id' => $_SESSION['user_id'] ?? null,
+                        'cart_id' => $_SESSION['cart_id'] ?? null
+                    ];
+                    makeApiRequest('Cart', 'clearCart', $cartData);
+                }
+            }
+        } else {
             // Si le paiement n'est pas complété, rediriger vers la page d'annulation
-            logError("Erreur de paiement : " . $paymentDetails, $paymentStatus);
-            header('Location: /cancel?order_id=' . $orderId);
+            logError("Erreur de paiement", ['status' => $paymentStatus, 'details' => $paymentDetails]);
+            header('Location: /cancel?type=' . $type . '&order_id=' . $orderId);
             exit;
         }
-
     } else {
-        logError("Erreur lors du traitement du paiement2222", $paymentDetails);
-        header('Location: /cancel?order_id=' . $orderId);
+        logError("Erreur lors de la vérification du paiement", $paymentDetails);
+        header('Location: /error');
         exit;
     }
+} else {
+    logError("Aucun ID de commande fourni", $_GET);
+    header('Location: /error');
+    exit;
 }
 
 $userEmail = $_SESSION['user_email'] ?? null;

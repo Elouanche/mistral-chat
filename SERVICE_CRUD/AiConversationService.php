@@ -164,19 +164,28 @@ class AiConversationService {
      * 
      * @param array $data Données de la conversation
      * @return array Résultat de l'opération
-     */
-    public function createConversation($data) {
+     */    public function createConversation($data) {
         try {
+            logInfo("Début de createConversation", ['data' => $data]);
+            
+            // Démarrer une transaction
+            $this->conversationsCRUD->beginTransaction();
+            logInfo("Transaction démarrée");
+            
             // Vérifier les limites avant de créer
             if (isset($data['user_id'])) {
+                logInfo("Vérification des limites pour l'utilisateur", ['user_id' => $data['user_id']]);
                 $limitCheck = $this->checkConversationLimits($data['user_id']);
+                logInfo("Résultat de la vérification des limites", ['result' => $limitCheck]);
                 if ($limitCheck['status'] === 'error') {
+                    $this->conversationsCRUD->rollback();
                     return $limitCheck;
                 }
             }
 
             // Vérifier les champs obligatoires
             if (!isset($data['user_id']) || !isset($data['model_id'])) {
+                logError("Données manquantes", ['user_id' => $data['user_id'] ?? null, 'model_id' => $data['model_id'] ?? null]);
                 return [
                     'status' => 'error',
                     'message' => "L'ID de l'utilisateur et l'ID du modèle sont obligatoires"
@@ -184,8 +193,10 @@ class AiConversationService {
             }
             
             // Vérifier que le modèle existe et est actif
+            logInfo("Vérification du modèle", ['model_id' => $data['model_id']]);
             $model = $this->modelsCRUD->get(['*'], ['id' => $data['model_id'], 'is_active' => 1]);
             if (empty($model)) {
+                logError("Modèle non trouvé ou inactif", ['model_id' => $data['model_id']]);
                 return [
                     'status' => 'error',
                     'message' => "Le modèle spécifié n'existe pas ou n'est pas actif"
@@ -201,15 +212,20 @@ class AiConversationService {
                 'system_prompt' => $data['system_prompt'] ?? null
             ];
             
+            logInfo("Tentative de création de la conversation", ['data' => $conversationData]);
+            
             // Créer la conversation
             $conversationId = $this->conversationsCRUD->insert($conversationData);
             
             if (!$conversationId) {
+                logError("Échec de la création de la conversation");
                 return [
                     'status' => 'error',
                     'message' => "Erreur lors de la création de la conversation"
                 ];
             }
+            
+            logInfo("Conversation créée avec succès", ['conversation_id' => $conversationId]);
             
             // Ajouter un message système si un prompt système est fourni
             if (isset($data['system_prompt']) && !empty($data['system_prompt'])) {
@@ -219,8 +235,13 @@ class AiConversationService {
                     'content' => $data['system_prompt']
                 ];
                 
+                logInfo("Ajout du message système", ['message' => $systemMessage]);
                 $this->messagesCRUD->insert($systemMessage);
             }
+            
+            // Valider la transaction
+            $this->conversationsCRUD->commit();
+            logInfo("Transaction validée");
             
             return [
                 'status' => 'success',
@@ -228,10 +249,16 @@ class AiConversationService {
                 'data' => ['conversation_id' => $conversationId]
             ];
         } catch (Exception $e) {
-            logError("Erreur lors de la création de la conversation", ['error' => $e->getMessage(), 'user_id' => $data['user_id'] ?? null]);
+            // En cas d'erreur, annuler la transaction
+            $this->conversationsCRUD->rollback();
+            logError("Exception dans createConversation", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $data['user_id'] ?? null
+            ]);
             return [
                 'status' => 'error',
-                'message' => "Erreur lors de la création de la conversation"
+                'message' => "Erreur lors de la création de la conversation: " . $e->getMessage()
             ];
         }
     }
@@ -436,27 +463,34 @@ class AiConversationService {
      * 
      * @param int $userId ID de l'utilisateur
      * @return array Statut de la vérification
-     */
-    private function checkConversationLimits($userId) {
+     */    private function checkConversationLimits($userId) {
         try {
-            // Récupérer l'abonnement actif de l'utilisateur
+            logInfo("Début de checkConversationLimits", ['user_id' => $userId]);
+            
+            // Utiliser la méthode get du BaseCRUD avec les conditions appropriées              
             $userSub = $this->userSubscriptionsCRUD->get(['plan_id'], [
                 'user_id' => $userId,
-                'status' => 'active',
-                'expires_at > NOW()' => null
+                'status' => 'active'
+                
             ]);
+            
+            logInfo("Abonnement utilisateur récupéré", ['userSub' => $userSub]);
 
             if (empty($userSub)) {
+                logInfo("Aucun abonnement actif trouvé, utilisation du plan gratuit");
                 // Plan gratuit par défaut
                 $planId = 1; // ID du plan gratuit
             } else {
                 $planId = $userSub[0]['plan_id'];
+                logInfo("Plan ID trouvé", ['plan_id' => $planId]);
             }
 
-            // Récupérer les limites du plan
+            // Récupérer les limites du plan            
             $plan = $this->subscriptionPlansCRUD->get(['*'], ['id' => $planId]);
+            logInfo("Plan récupéré", ['plan' => $plan]);
             
             if (empty($plan)) {
+                logError("Plan non trouvé", ['plan_id' => $planId]);
                 return [
                     'status' => 'error',
                     'message' => 'Plan non trouvé'
@@ -464,6 +498,10 @@ class AiConversationService {
             }
 
             $plan = $plan[0];
+            logInfo("Détails du plan", [
+                'plan_id' => $plan['id'],
+                'max_conversations' => $plan['max_conversations']
+            ]);
             
             // Compter les conversations actives de l'utilisateur
             $activeConversations = $this->conversationsCRUD->count([

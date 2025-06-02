@@ -140,11 +140,16 @@ document.addEventListener('DOMContentLoaded', function() {
             modelsGrid.innerHTML = '<p>Aucun modèle disponible pour le moment.</p>';
             return;
         }
-        
-        const modelCardsHTML = models.map(model => `
+          const modelCardsHTML = models.map(model => `
             <div class="model-card">
-                <h4>${model.model_name}</h4>
-                <p>${model.description || 'Aucune description disponible'}</p>
+                <div class="model-header">
+                    <h4>${model.model_name}</h4>
+                    <span class="model-badge">${model.is_active ? 'Actif' : 'Inactif'}</span>
+                </div>
+                <p class="model-description">${model.description || 'Aucune description disponible'}</p>
+                <div class="model-footer">
+                    <span class="model-info">ID: ${model.id}</span>
+                </div>
             </div>
         `).join('');
         
@@ -166,10 +171,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        models.forEach(model => {
-            const option = document.createElement('option');
+        models.forEach(model => {            const option = document.createElement('option');
             option.value = model.id;
-            option.textContent = model.display_name;
+            option.textContent = `${model.model_name} - ${model.description || 'Aucune description'}`;
             chatModelSelect.appendChild(option);
         });
     }    function loadConversations() {
@@ -446,15 +450,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const submitBtn = newChatForm.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Création en cours...';
-
+        submitBtn.textContent = 'Création en cours...';        
         const context = {
             service: 'AiConversation',
             action: 'createConversation',
             data: {
                 title: title,
                 model_id: modelId,
-                system_prompt: systemPrompt
+                system_prompt: systemPrompt,
+                user_id: userId // Ajout de l'ID utilisateur
             }
         };
         

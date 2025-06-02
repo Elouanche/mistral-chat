@@ -151,16 +151,18 @@ CREATE TABLE IF NOT EXISTS review_responses (
 DROP TABLE IF EXISTS payments;
 CREATE TABLE IF NOT EXISTS payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
+    order_id INT NULL,
     user_id INT NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
+    payment_type ENUM('order', 'subscription') NOT NULL DEFAULT 'order',
     amount DECIMAL(10, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'Pending',
     stripe_payment_id VARCHAR(255) NULL,
     refund_id VARCHAR(255) NULL,
+    metadata JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 

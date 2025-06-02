@@ -8,12 +8,13 @@ return [
     '/chat' => 'chat/index',
     '/chat/history' => 'chat/history',
     '/subscription' => 'subscription',
+    '/checkout' => 'checkout',
+    '/success' => 'success',
+    '/subscription-success' => 'success',
+    '/payment-success' => 'success',
     '/order-success' => 'success',
     '/email-success' => 'success',
     '/contact-success' => 'success',
-    '/subscription-success' => 'success',
-    '/payment-success' => 'success',
-    '/success' => 'success',
     '/cancel' => 'cancel',
     
     // Administration

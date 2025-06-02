@@ -16,13 +16,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function initialize() {
     // Utiliser postData au lieu de fetch
-    const response = await postData( {
+    const response = await postData({
         service: 'Payment',
         action: 'createPaymentIntent',
         data: {
             checkout_type: checkoutType,
+            type: checkoutType,
             plan_id: planId || null,
-            amount: total
+            amount: total,
+            order_id: orderId,
+            user_id: userId
         }
     });
 
@@ -60,6 +63,18 @@ async function handleSubmit(e) {
     setLoading(false);
 }
 
+async function handleSuccessfulPayment(paymentIntent) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutType = urlParams.get('type');
+    const metadata = paymentIntent.metadata || {};
+
+    if (metadata.type === 'subscription' || checkoutType === 'subscription') {
+        window.location.href = '/subscription-success';
+    } else {
+        window.location.href = '/order-success';
+    }
+}
+
 async function checkStatus() {
     const clientSecret = new URLSearchParams(window.location.search).get(
         "payment_intent_client_secret"
@@ -74,6 +89,7 @@ async function checkStatus() {
     switch (paymentIntent.status) {
         case "succeeded":
             showMessage("Le paiement a réussi!");
+            await handleSuccessfulPayment(paymentIntent);
             break;
         case "processing":
             showMessage("Votre paiement est en cours de traitement.");

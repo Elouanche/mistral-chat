@@ -107,14 +107,15 @@ class PaymentService {
         $amountInCents = (int) round($data['amount'] * 100);
         logDebug("Montant converti pour Stripe", ['amount' => $data['amount'], 'cents' => $amountInCents]);
 
-        try {
-            $paymentIntent = $this->stripe->paymentIntents->create([
+        try {            $paymentIntent = $this->stripe->paymentIntents->create([
                 'amount' => $amountInCents,
                 'currency' => 'eur',
                 'payment_method_types' => [self::PAYMENT_TYPE_CARD],
                 'metadata' => [
                     'order_id' => $data['order_id'],
-                    'user_id' => $data['user_id']
+                    'user_id' => $data['user_id'],
+                    'type' => $data['type'] ?? 'order',
+                    'plan_id' => $data['plan_id'] ?? null
                 ]
             ]);
 
@@ -178,13 +179,13 @@ class PaymentService {
         // Créer la session de paiement
         $session = $this->stripe->checkout->sessions->create([
             'payment_method_types' => ['card'],
-            'mode' => 'payment',
-            'success_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/success?type=order&order_id=' . $data['order_id'],
-            'cancel_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/cancel?order_id=' . $data['order_id'],
-            'line_items' => $data['line_items'],
-            'metadata' => [
+            'mode' => 'payment',            'success_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/success?type=' . ($data['type'] ?? 'order') . '&order_id=' . $data['order_id'] . (isset($data['plan_id']) ? '&plan_id=' . $data['plan_id'] : ''),
+            'cancel_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/cancel?type=' . ($data['type'] ?? 'order') . '&order_id=' . $data['order_id'],
+            'line_items' => $data['line_items'],            'metadata' => [
                 'order_id' => $data['order_id'],
-                'user_id' => $data['user_id']
+                'user_id' => $data['user_id'],
+                'type' => $data['type'] ?? 'order',
+                'plan_id' => $data['plan_id'] ?? null
             ]
         ]);
 
@@ -424,18 +425,8 @@ class PaymentService {
                 $this->paymentsCRUD->update(
                     ['status' => $stripeStatus['db_status'], 'updated_at' => date('Y-m-d H:i:s')],
                     ['id' => $payment['id']]
-                );
-                
-                if ($stripeStatus['db_status'] === PaymentStatus::COMPLETED->value) {
-                    return [
-                        'status' => 'pending',
-                        'service' => 'Order',
-                        'action' => 'updateOrderStatus',
-                        'data' => [
-                            'order_id' => $payment['order_id'],
-                            'status' => 'Paid'
-                        ]
-                    ];
+                );                if ($stripeStatus['db_status'] === PaymentStatus::COMPLETED->value) {
+                    return $this->handleSuccessfulPayment($payment);
                 } elseif ($stripeStatus['db_status'] === PaymentStatus::FAILED->value) {
                     // Gérer l'échec du paiement
                     logWarning("Échec du paiement: " . $stripePaymentId);
@@ -874,7 +865,7 @@ class PaymentService {
      *
      * @param array $data - Données contenant l'ID de la session Checkout
      * @return array
-     */
+     */    
     private function fetchCheckoutSessionStatus($data): array {
         $sessionId = $data['stripe_payment_id'] ?? null;
         
@@ -882,7 +873,14 @@ class PaymentService {
             return ['status' => 'error', 'message' => 'ID de session Stripe requis'];
         }
         
-        $session = $this->stripe->checkout->sessions->retrieve($sessionId);
+        try {
+            $session = $this->stripe->checkout->sessions->retrieve($sessionId);
+            
+            // Récupérer le PaymentIntent associé si disponible
+            if ($session->payment_intent) {
+                $paymentIntent = $this->stripe->paymentIntents->retrieve($session->payment_intent);
+                $session->metadata = $paymentIntent->metadata;
+            }
         
         if (!$session) {
             logWarning("Échec de récupération de la session Checkout: " . $sessionId);
@@ -909,6 +907,13 @@ class PaymentService {
             'stripe_status' => $session->payment_status,
             'db_status' => $dbStatus
         ];
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            logError("Erreur Stripe lors de la récupération de la session Checkout", [
+                'message' => $e->getMessage(),
+                'code' => $e->getStripeCode()
+            ]);
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }   
     }
 
     /**
@@ -928,5 +933,49 @@ class PaymentService {
             $total += $item['price_data']['unit_amount'] * $item['quantity'];
         }
         return round($total, 2); // Arrondir à deux décimales
+    }
+
+    /**
+     * Gère le traitement d'un paiement réussi
+     * 
+     * @param array $payment - Détails du paiement
+     * @param array|null $metadata - Métadonnées optionnelles
+     * @return array - Statut et actions à entreprendre
+     */
+    private function handleSuccessfulPayment($payment, $metadata = null) {
+        if (!$metadata && isset($payment['stripe_payment_id'])) {
+            if (str_starts_with($payment['stripe_payment_id'], self::STRIPE_PAYMENT_INTENT_PREFIX)) {
+                $pi = $this->stripe->paymentIntents->retrieve($payment['stripe_payment_id']);
+                $metadata = $pi->metadata->toArray();
+            } elseif (str_starts_with($payment['stripe_payment_id'], self::STRIPE_CHECKOUT_SESSION_PREFIX)) {
+                $session = $this->stripe->checkout->sessions->retrieve($payment['stripe_payment_id']);
+                if ($session->payment_intent) {
+                    $pi = $this->stripe->paymentIntents->retrieve($session->payment_intent);
+                    $metadata = $pi->metadata->toArray();
+                }
+            }
+        }
+
+        if ($metadata && isset($metadata['type']) && $metadata['type'] === 'subscription' && isset($metadata['plan_id'])) {
+            return [
+                'status' => 'pending',
+                'service' => 'Subscription',
+                'action' => 'createSubscription',
+                'data' => [
+                    'user_id' => $metadata['user_id'],
+                    'plan_id' => $metadata['plan_id']
+                ]
+            ];
+        }
+
+        return [
+            'status' => 'pending',
+            'service' => 'Order',
+            'action' => 'updateOrderStatus',
+            'data' => [
+                'order_id' => $payment['order_id'],
+                'status' => 'Paid'
+            ]
+        ];
     }
 }
