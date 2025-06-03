@@ -69,9 +69,9 @@ INSERT INTO review_responses (review_id, admin_id, response) VALUES
 (2, 1, 'We appreciate your thoughts!');
 
 -- Ajout de paiements
-INSERT INTO payments (order_id, user_id, payment_method, amount, status) VALUES
-(1, 1, 'Credit Card', 999.99, 'Pending'),
-(2, 2, 'PayPal', 1399.98, 'Successful');
+INSERT INTO payments (order_id, user_id, payment_method, amount, status, payment_type) VALUES
+(1, 1, 'Credit Card', 999.99, 'Pending', 'order'),
+(2, 2, 'PayPal', 1399.98, 'Successful', 'order');
 
 -- Ajout de notifications
 INSERT INTO notifications (user_id, message, type, status) VALUES
@@ -159,15 +159,15 @@ INSERT INTO api_logs (user_id, request_id, event_type, details) VALUES
 (4, 3, 'request_initiated', '{"timestamp": "2025-05-16T14:25:30Z"}');
 
 -- Ajout de plans d’abonnement
-INSERT INTO subscription_plans (name, description, price, max_conversations, max_messages_per_day, is_active) VALUES
-('Gratuit', 'Plan gratuit avec fonctionnalités limitées', 0.00, 3, 50, 1),
-('Standard', 'Plan standard pour une utilisation régulière', 9.99, 10, 200, 1),
-('Pro', 'Plan professionnel pour les utilisateurs avancés', 29.99, 50, 1000, 1),
-('Entreprise', 'Plan entreprise pour les grandes équipes', 99.99, 200, 5000, 1);
+INSERT INTO subscription_plans (name, description, price, max_conversations, max_messages_per_day, is_active, created_at) VALUES
+('Gratuit', 'Plan gratuit avec fonctionnalités limitées', 0.00, 3, 50, 1, CURRENT_TIMESTAMP),
+('Standard', 'Plan standard pour une utilisation régulière', 9.99, 10, 200, 1, CURRENT_TIMESTAMP),
+('Pro', 'Plan professionnel pour les utilisateurs avancés', 29.99, 50, 1000, 1, CURRENT_TIMESTAMP),
+('Entreprise', 'Plan entreprise pour les grandes équipes', 99.99, 200, 5000, 1, CURRENT_TIMESTAMP);
 
 -- Ajout d’abonnements utilisateurs
 INSERT INTO user_subscriptions (user_id, plan_id, status, started_at, expires_at) VALUES
-(1, 2, 'active', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(2, 1, 'active', NOW(), NULL),
-(3, 3, 'cancelled', DATE_SUB(NOW(), INTERVAL 60 DAY), DATE_SUB(NOW(), INTERVAL 30 DAY)),
-(4, 2, 'expired', DATE_SUB(NOW(), INTERVAL 90 DAY), DATE_SUB(NOW(), INTERVAL 60 DAY));
+(1, 2, 'active', CURRENT_TIMESTAMP, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY)),
+(2, 1, 'active', CURRENT_TIMESTAMP, NULL),
+(3, 3, 'cancelled', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 DAY), DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY)),
+(4, 2, 'expired', DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 90 DAY), DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 60 DAY));

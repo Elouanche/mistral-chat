@@ -468,15 +468,21 @@ function handleSubscriptionService($conn, $action, $data) {
     $subscription = new SubscriptionService($conn);
     
     switch ($action) {
-       
+        case 'getById':
+            return $subscription->getById($data);
+            
         case 'getAvailablePlans':
             return $subscription->getAvailablePlans($data);
+            
         case 'getUserSubscription':
             return $subscription->getUserSubscription($data);
+            
         case 'createSubscription':
             return $subscription->createSubscription($data);
+            
         case 'cancelSubscription':
             return $subscription->cancelSubscription($data);
+            
         case 'canUserUseModel':
             if (!isset($data['user_id']) || !isset($data['model_name'])) {
                 return [
@@ -492,7 +498,5 @@ function handleSubscriptionService($conn, $action, $data) {
         
         default:
             logError("Invalid $action action requested", ['action' => $action]);
-            return ['status' => 'error', 'message' => 'Invalid action'];
-    }
+            return ['status' => 'error', 'message' => 'Invalid action'];    }
 }
-?>

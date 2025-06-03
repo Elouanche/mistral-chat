@@ -1,138 +1,118 @@
 // Variables globales qui seront définies dans la page checkout.php
-let stripe = null;
-let elements = null;
+let checkoutType = null;
+let userId = null;
+let planId = null;
+let checkoutData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialiser Stripe avec la clé publique
-    stripe = Stripe(stripePublicKey);
-      initialize();
-    checkStatus();
-    
-    // Ajouter l'écouteur d'événements pour le formulaire
-    document
-        .querySelector("#payment-form")
-        .addEventListener("submit", handleSubmit);
+    // Initialiser les variables depuis la page PHP
+    userId = window.userId || null;
+    checkoutType = window.checkoutType || 'cart';
+    planId = window.planId || null;
+    checkoutData = window.checkoutData || null;
+
+    // Vérifier si les données nécessaires sont présentes
+    if (checkoutType === 'subscription') {
+        if (!planId || !checkoutData || !checkoutData.name) {
+            window.location.href = '/subscription?error=invalid_plan';
+            return;
+        }
+    }
+
+    // Ajouter l'écouteur d'événement au bouton de paiement
+    const checkoutButton = document.getElementById('proceed-to-payment');
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', handlePayment);
+    }
 });
 
-async function initialize() {
-    // Utiliser postData au lieu de fetch
-    const response = await postData({
-        service: 'Payment',
-        action: 'createPaymentIntent',
-        data: {
-            checkout_type: checkoutType,
-            type: checkoutType,
-            plan_id: planId || null,
-            amount: total,
-            order_id: orderId,
-            user_id: userId
-        }
-    });
-
-    if (response && response.clientSecret) {
-        elements = stripe.elements({ clientSecret: response.clientSecret });
-        const paymentElement = elements.create("payment");
-        paymentElement.mount("#payment-element");
-    } else {
-        showMessage("Erreur lors de l'initialisation du paiement");
-    }
-}
-
-async function handleSubmit(e) {
-    e.preventDefault();
+/**
+ * Gère le processus de paiement
+ */
+async function handlePayment() {
     setLoading(true);
 
-    const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-            return_url: `${window.location.origin}/success`,
-            payment_method_data: {
-                billing_details: {
-                    email: userEmail || ''
-                }
+    try {
+        // Préparer les données pour l'API en fonction du type de checkout
+        const apiData = {
+            checkout_type: checkoutType,
+            user_id: userId
+        };
+
+        // Ajouter les données spécifiques au type de checkout
+        if (checkoutType === 'subscription') {
+            if (!planId || !checkoutData) {
+                window.location.href = '/subscription?error=invalid_plan';
+                return;
             }
-        },
-    });    if (error) {
-        if (error.type === "card_error" || error.type === "validation_error") {
-            showMessage(error.message);
-        } else {
-            showMessage("Une erreur inattendue s'est produite.");
+            apiData.plan_id = planId;
+            apiData.price_data = {
+                name: checkoutData.name,
+                unit_amount: checkoutData.price * 100, // Conversion en centimes pour Stripe
+                currency: 'eur'
+            };
+            if (checkoutData.description) {
+                apiData.price_data.description = checkoutData.description;
+            }
+        } else if (checkoutType === 'cart') {
+            if (!checkoutData || !checkoutData.items || checkoutData.items.length === 0) {
+                window.location.href = '/cart?error=empty_cart';
+                return;
+            }
+            apiData.items = checkoutData.items.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                unit_amount: Math.round(item.price * 100), // Conversion en centimes pour Stripe
+                currency: 'eur',
+                description: item.description || undefined
+            }));
+            apiData.total_amount = Math.round(checkoutData.total_amount * 100); // Conversion en centimes
         }
-    }
-    
-    setLoading(false);
-}
 
-async function handleSuccessfulPayment(paymentIntent) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const checkoutType = urlParams.get('type');
-    const metadata = paymentIntent.metadata || {};
+        // Créer la session de checkout via l'API
+        const response = await postData({
+            service: 'Payment',
+            action: 'createCheckoutSession',
+            data: apiData
+        });
 
-    if (metadata.type === 'subscription' || checkoutType === 'subscription') {
-        window.location.href = '/subscription-success';
-    } else {
-        window.location.href = '/order-success';
-    }
-}
-
-async function checkStatus() {
-    const clientSecret = new URLSearchParams(window.location.search).get(
-        "payment_intent_client_secret"
-    );
-    
-    if (!clientSecret) {
-        return;
-    }
-    
-    const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-    
-    switch (paymentIntent.status) {
-        case "succeeded":
-            showMessage("Le paiement a réussi!");
-            await handleSuccessfulPayment(paymentIntent);
-            break;
-        case "processing":
-            showMessage("Votre paiement est en cours de traitement.");
-            break;
-        case "requires_payment_method":
-            showMessage("Votre paiement n'a pas réussi, veuillez réessayer.");
-            break;
-        default:
-            showMessage("Une erreur s'est produite.");
-            break;
+        if (response.status === 'success' && response.data?.url) {
+            window.location.href = response.data.url;
+        } else {
+            if (response.error === 'invalid_plan' || response.code === 'INVALID_PLAN') {
+                window.location.href = '/subscription?error=invalid_plan';
+                return;
+            }
+            showMessage(response.message || 'Erreur lors de la création de la session de paiement');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showMessage('Une erreur est survenue lors de la création de la session de paiement');
+    } finally {
+        setLoading(false);
     }
 }
 
 function showMessage(messageText) {
     const messageContainer = document.querySelector("#payment-message");
-    messageContainer.classList.remove("hidden");
-    messageContainer.textContent = messageText;
-    setTimeout(function () {
-        messageContainer.classList.add("hidden");
-        messageText.textContent = "";
-    }, 4000);
+    if (messageContainer) {
+        messageContainer.classList.remove("hidden");
+        messageContainer.textContent = messageText;
+        setTimeout(function () {
+            messageContainer.classList.add("hidden");
+            messageContainer.textContent = "";
+        }, 4000);
+    } else {
+        alert(messageText);
+    }
 }
 
 function setLoading(isLoading) {
-    if (isLoading) {
-        document.querySelector("#submit").disabled = true;
-        document.querySelector("#spinner").classList.remove("hidden");
-        document.querySelector("#button-text").classList.add("hidden");
-    } else {
-        document.querySelector("#submit").disabled = false;
-        document.querySelector("#spinner").classList.add("hidden");
-        document.querySelector("#button-text").classList.remove("hidden");
-    }
-}
-        
-        if (result.status === 'error') {
-            showNotification(result.message || 'Erreur lors de la création de la commande', 'error');
-            return;
-        }
-        
-        
-    } catch (error) {
-        console.error('Erreur:', error);
-        showNotification('Une erreur est survenue lors de la création de la commande', 'error');
+    const button = document.querySelector("#proceed-to-payment");
+    if (button) {
+        button.disabled = isLoading;
+        button.innerHTML = isLoading ? 
+            '<div class="spinner"></div><span>Chargement...</span>' : 
+            'Procéder au paiement';
     }
 }

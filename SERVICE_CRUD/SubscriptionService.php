@@ -269,4 +269,68 @@ class SubscriptionService {
         
         return !empty($planModels);
     }
+
+    /**
+     * Récupère un plan d'abonnement par son ID
+     * 
+     * @param array $data Les données avec l'ID du plan
+     * @return array La réponse avec le statut et les données
+     */
+    public function getById($data) {
+        try {
+            if (!isset($data['id']) || !is_numeric($data['id'])) {
+                return [
+                    'status' => 'error',
+                    'message' => "L'ID du plan est obligatoire et doit être numérique"
+                ];
+            }
+
+            // Récupérer le plan et s'assurer qu'il est actif
+            $plan = $this->plansCRUD->find($data['id']);
+            
+            // Logger la réponse pour le debug
+            logInfo("Récupération du plan", ['plan_id' => $data['id'], 'plan' => $plan]);
+            
+            if (!$plan) {
+                return [
+                    'status' => 'error',
+                    'message' => "Plan non trouvé",
+                    'code' => 'PLAN_NOT_FOUND'
+                ];
+            }
+
+            if (!$plan['is_active']) {
+                return [
+                    'status' => 'error',
+                    'message' => "Ce plan n'est plus disponible",
+                    'code' => 'PLAN_INACTIVE'
+                ];
+            }
+
+            // Vérifier que les champs requis sont présents
+            if (empty($plan['name']) || !isset($plan['price'])) {
+                return [
+                    'status' => 'error',
+                    'message' => "Les données du plan sont incomplètes",
+                    'code' => 'INVALID_PLAN_DATA'
+                ];
+            }
+
+            return [
+                'status' => 'success',
+                'data' => $plan
+            ];
+            
+        } catch (Exception $e) {
+            logError("Erreur lors de la récupération du plan", [
+                'error' => $e->getMessage(),
+                'plan_id' => $data['id']
+            ]);
+            return [
+                'status' => 'error',
+                'message' => "Erreur lors de la récupération du plan",
+                'code' => 'SERVER_ERROR'
+            ];
+        }
+    }
 }

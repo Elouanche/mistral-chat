@@ -53,7 +53,7 @@ async function postData(data) {
             console.log('Success response:', jsonResponse);
             
             // Gestion de la redirection
-            const redirectUrl = jsonResponse.redirect || jsonResponse.data?.redirect;
+            const redirectUrl = jsonResponse.redirect || jsonResponse.data?.redirect || jsonResponse.session?.url;
             if (redirectUrl) {
                 console.log('Redirecting to:',  redirectUrl);
                 window.location.href =  redirectUrl;

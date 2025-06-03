@@ -1,43 +1,143 @@
 <?php
 
 require_once SHARED_PATH . 'userAcces.php';
-require_once SECURISER_PATH . 'stripe_api_keys.php';
 
 // Initialisation des variables
 $userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
-$userEmail = isset($_SESSION['user_email']) ? $_SESSION['user_email'] : '';
-$checkoutType = $_GET['type'] ?? 'cart'; // 'cart' ou 'subscription'
+$checkoutType = $_GET['type'] ?? 'cart';
 $planId = $_GET['plan_id'] ?? null;
-
-$total = 0;
-$itemCount = 0;
 $checkoutData = null;
+$errorMessage = null;
 
-// Récupération des données selon le type de checkout
-if ($checkoutType === 'subscription' && $planId) {
-    // Récupérer les détails du plan d'abonnement
-    $planResult = makeApiRequest('SubscriptionPlans', 'getById', ['id' => $planId]);
-    if (is_array($planResult) && isset($planResult['status']) && $planResult['status'] === 'success') {
-        $checkoutData = $planResult['data'];
-        $total = $checkoutData['price'];
-    } else {
-        header('Location: /subscription?error=invalid_plan');
-        exit;
-    }
-} else {
-    // Récupération du panier pour un achat normal
-    $params = [];
-    if ($userId) {
-        $params['user_id'] = $userId;
-    }
-    $cartResult = makeApiRequest('Cart', 'getCart', $params);
-    if (is_array($cartResult) && isset($cartResult['status']) && $cartResult['status'] === 'success') {
+logInfo('Démarrage du processus de checkout', [
+    'user_id' => $userId,
+    'checkout_type' => $checkoutType,
+    'plan_id' => $planId
+]);
+
+try {
+    // Validation du type de checkout et des paramètres requis
+    if ($checkoutType === 'subscription') {
+        logInfo('Traitement d\'un checkout de type abonnement');
+        
+        // Vérification du plan ID
+        if (!$planId || !is_numeric($planId)) {
+            logError('Plan ID manquant ou invalide', [
+                'plan_id' => $planId,
+                'is_numeric' => is_numeric($planId)
+            ]);
+            throw new Exception('Plan ID manquant ou invalide');
+        }
+        
+        // Récupérer les détails du plan d'abonnement
+        logInfo('Tentative de récupération des plans d\'abonnement');
+        $plansResult = makeApiRequest('Subscription', 'getAvailablePlans', []);
+        
+        if (!isset($plansResult['status']) || !isset($plansResult['data'])) {
+            logError('Réponse API invalide pour les plans', [
+                'response' => $plansResult
+            ]);
+            throw new Exception('Erreur lors de la récupération des plans: Format de réponse invalide');
+        }
+        
+        if ($plansResult['status'] !== 'success') {
+            logError('Erreur lors de la récupération des plans', [
+                'status' => $plansResult['status'],
+                'message' => $plansResult['message'] ?? 'Erreur inconnue'
+            ]);
+            throw new Exception('Erreur lors de la récupération des plans: ' . ($plansResult['message'] ?? 'Erreur inconnue'));
+        }
+        
+        if (!is_array($plansResult['data'])) {
+            logError('Format de données des plans invalide', [
+                'data_type' => gettype($plansResult['data'])
+            ]);
+            throw new Exception('Erreur lors de la récupération des plans: Format de données invalide');
+        }
+        
+        $plans = $plansResult['data'];
+        $selectedPlan = null;
+        
+        foreach ($plans as $plan) {
+            if (!isset($plan['id'])) {
+                logError('Plan sans ID détecté', [
+                    'plan' => $plan
+                ]);
+                continue;
+            }
+            
+            if ($plan['id'] == $planId) {
+                $selectedPlan = $plan;
+                logInfo('Plan sélectionné trouvé', [
+                    'plan_id' => $plan['id'],
+                    'plan_name' => $plan['name'] ?? 'N/A'
+                ]);
+                break;
+            }
+        }
+        
+        if (!$selectedPlan) {
+            logError('Plan non trouvé', [
+                'plan_id' => $planId,
+                'available_plans' => array_column($plans, 'id')
+            ]);
+            throw new Exception('Le plan sélectionné n\'existe pas ou n\'est pas disponible');
+        }
+        
+        $checkoutData = $selectedPlan;
+        logInfo('Plan d\'abonnement validé avec succès', [
+            'plan_id' => $planId,
+            'plan_name' => $checkoutData['name'] ?? 'N/A',
+            'plan_price' => $checkoutData['price'] ?? 0
+        ]);
+        
+    } elseif ($checkoutType === 'cart') {
+        logInfo('Traitement d\'un checkout de type panier');
+        
+        if (!$userId) {
+            logError('Utilisateur non connecté lors du checkout de type panier', [
+                'user_id' => $userId
+            ]);
+            throw new Exception('Utilisateur non connecté');
+        }
+        
+        // Récupération du panier
+        $params = ['user_id' => $userId];
+        $cartResult = makeApiRequest('Cart', 'getCart', $params);
+        if (!is_array($cartResult) || !isset($cartResult['status']) || $cartResult['status'] !== 'success' || empty($cartResult['data'])) {
+            header('Location: /cart?error=invalid_cart');
+            logError('Erreur lors de la récupération du panier', [
+                'user_id' => $userId,
+                'cart_result' => $cartResult
+            ]);
+            exit;
+        }
         $checkoutData = $cartResult['data'];
-        $total = $checkoutData['total_amount'] ?? 0;
-        $itemCount = $checkoutData['item_count'] ?? 0;
     } else {
-        logError("Erreur lors de la récupération du panier", $cartResult);
+        throw new Exception('Type de checkout invalide');
+        logError('Type de checkout invalide', [
+            'checkout_type' => $checkoutType
+        ]);
     }
+    
+} catch (Exception $e) {
+    logError('Erreur durant le processus de checkout', [
+        'error_message' => $e->getMessage(),
+        'error_code' => $e->getCode(),
+        'error_file' => $e->getFile(),
+        'error_line' => $e->getLine(),
+        'checkout_type' => $checkoutType,
+        'plan_id' => $planId
+    ]);
+    
+    $errorMessage = $e->getMessage();
+    
+    if ($checkoutType === 'subscription') {
+        header('Location: /subscription?error=checkout_failed&message=' . urlencode($errorMessage));
+    } else {
+        header('Location: /cart?error=checkout_failed&message=' . urlencode($errorMessage));
+    }
+    exit;
 }
 
 // Redirection si aucune donnée valide
@@ -51,7 +151,6 @@ if (!$checkoutData) {
 <head>
     <?php require_once COMPONENT_PATH . 'head.php'; ?>
     <title>Mistral Chat - Paiement</title>
-    <script src="https://js.stripe.com/v3/"></script>
 </head>
 
 <body>
@@ -63,107 +162,103 @@ if (!$checkoutData) {
     <main role="main" class="checkout-page">
         <h1><?= $checkoutType === 'subscription' ? 'Finaliser votre abonnement' : 'Finaliser votre commande' ?></h1>
 
+        <!-- Debug info (à supprimer en production) -->
+        <?php if (isset($_GET['debug']) && !empty($_GET['debug'])): ?>
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">
+            <strong>Debug Info:</strong> <?= htmlspecialchars($_GET['debug']) ?>
+        </div>
+        <?php endif; ?>
+
         <div class="checkout-layout">
-            <form id="payment-form" class="checkout-form">
-                <input type="hidden" name="checkout_type" value="<?= htmlspecialchars($checkoutType) ?>">
-                <?php if ($checkoutType === 'subscription'): ?>
-                    <input type="hidden" name="plan_id" value="<?= htmlspecialchars($planId) ?>">
-                <?php else: ?>
-                    <input type="hidden" name="cart-data" value='<?= json_encode($checkoutData['items'] ?? []); ?>'>
-                <?php endif; ?>
-
-                <div id="payment-element"></div>
-
-                <button id="submit" class="btn btn-primary">
-                    <div class="spinner hidden" id="spinner"></div>
-                    <span id="button-text">Payer maintenant</span>
-                </button>
-                <div id="payment-message" class="hidden"></div>
-            </form>
-
-            <aside class="order-summary">
+            <!-- Récapitulatif de la commande -->
+            <div class="order-summary">
                 <h3><?= $checkoutType === 'subscription' ? 'Récapitulatif de l\'abonnement' : 'Récapitulatif de votre commande' ?></h3>
                 
                 <?php if ($checkoutType === 'subscription'): ?>
                     <div class="plan-details">
-                        <h4><?= htmlspecialchars($checkoutData['name']) ?></h4>
-                        <p class="description"><?= htmlspecialchars($checkoutData['description'] ?? '') ?></p>
+                        <h4><?= htmlspecialchars($checkoutData['name'] ?? 'Plan sans nom') ?></h4>
+                        <p class="description"><?= htmlspecialchars($checkoutData['description'] ?? 'Aucune description') ?></p>
                         <div class="features">
                             <?php
-                            $features = json_decode($checkoutData['features'], true);
+                            $features = [];
+                            if (isset($checkoutData['features'])) {
+                                if (is_string($checkoutData['features'])) {
+                                    $features = json_decode($checkoutData['features'], true) ?: [];
+                                } elseif (is_array($checkoutData['features'])) {
+                                    $features = $checkoutData['features'];
+                                }
+                            }
+                            
                             if ($features && is_array($features)):
                                 foreach ($features as $key => $value):
                                     if (is_array($value)):
-                                        echo "<p><i class='fas fa-check'></i> " . implode(", ", $value) . "</p>";
+                                        echo "<p><i class='fas fa-check'></i> " . htmlspecialchars(implode(", ", $value)) . "</p>";
                                     elseif ($value === true):
-                                        echo "<p><i class='fas fa-check'></i> " . ucfirst(str_replace('_', ' ', $key)) . "</p>";
+                                        echo "<p><i class='fas fa-check'></i> " . htmlspecialchars(ucfirst(str_replace('_', ' ', $key))) . "</p>";
+                                    elseif (is_string($value) || is_numeric($value)):
+                                        echo "<p><i class='fas fa-check'></i> " . htmlspecialchars($key . ': ' . $value) . "</p>";
                                     endif;
                                 endforeach;
                             endif;
                             ?>
                         </div>
                         <div class="price">
-                            <span class="amount"><?= number_format($checkoutData['price'], 2) ?> €</span>
+                            <span class="amount"><?= number_format(floatval($checkoutData['price'] ?? 0), 2) ?> €</span>
                             <span class="period">/mois</span>
                         </div>
                     </div>
                 <?php else: ?>
-                    <div id="cart-items" class="cart-items">
+                    <div class="cart-items">
                         <?php if (!empty($checkoutData['items'])): ?>
                             <?php foreach ($checkoutData['items'] as $item): ?>
-                                <?php
-                                    if (!isset($item['product_id'], $item['quantity'], $item['price'])) continue;
-
-                                    $itemTotal = round($item['price'] * $item['quantity'], 2);
-                                ?>
-                                <article class="cart-item" data-product-id="<?= (int)$item['product_id']; ?>">
-                                    <?php if (!empty($item['product_image'])): ?>
-                                        <img 
-                                            src="<?= htmlspecialchars(PRODUCT_IMAGES_URL . $item['product_image']); ?>" 
-                                            alt="<?= htmlspecialchars($item['product_name']); ?>" 
-                                            class="cart-item-image" 
-                                            loading="lazy"
-                                            width="100"
-                                            height="100"
-                                        >
-                                    <?php else: ?>
-                                        <div class="cart-item-image-placeholder">
-                                            <span class="no-image">Pas d'image</span>
-                                        </div>
-                                    <?php endif; ?>
+                                <article class="cart-item">
                                     <div class="cart-item-details">
-                                        <div class="product-header-checkout">
-                                            <h3><?= htmlspecialchars($item['name'] ?? 'Nom non défini'); ?></h3>
-                                            <p class="price">Prix : <?= number_format($item['price'], 2); ?> €</p>
-                                        </div>
-                                        <p class="quantity-info">Quantité : <?= (int)$item['quantity']; ?></p>
-                                        <p>Total : <?= number_format($itemTotal, 2); ?> €</p>
+                                        <h4><?= htmlspecialchars($item['name'] ?? 'Nom non défini'); ?></h4>
+                                        <p>Prix unitaire : <?= number_format(floatval($item['price'] ?? 0), 2); ?> €</p>
+                                        <p>Quantité : <?= intval($item['quantity'] ?? 0); ?></p>
+                                        <p>Total : <?= number_format(floatval($item['price'] ?? 0) * intval($item['quantity'] ?? 0), 2); ?> €</p>
                                     </div>
                                 </article>
                             <?php endforeach; ?>
 
                             <div class="cart-total">
-                                <h3>Total : <span id="cart-total-price"><?= number_format($total, 2); ?> €</span></h3>
+                                <h3>Total : <?= number_format(floatval($checkoutData['total_amount'] ?? 0), 2); ?> €</h3>
                             </div>
-                        <?php else: ?>
-                            <p>Votre panier est vide.</p>
                         <?php endif; ?>
-
-                        <a href="/cart" class="btn btn-secondary" aria-label="Retour au panier">Retour au panier</a>
                     </div>
                 <?php endif; ?>
-            </aside>
+
+                <!-- Message d'erreur -->
+                <div id="payment-message" class="hidden"></div>
+
+                <!-- Bouton de paiement -->
+                <div class="payment-actions">
+                    <?php if ($checkoutType === 'subscription'): ?>
+                        <a href="/subscription" class="btn btn-secondary">Retour aux abonnements</a>
+                    <?php else: ?>
+                        <a href="/cart" class="btn btn-secondary">Retour au panier</a>
+                    <?php endif; ?>
+                    
+                    <button id="proceed-to-payment" class="btn btn-primary">
+                        Procéder au paiement
+                    </button>
+                </div>
+            </div>
         </div>
     </main>
 
     <script>
-        // Définir les variables nécessaires pour le JavaScript
-        const stripePublicKey = '<?php echo $stripe_public_key; ?>';
-        const checkoutType = '<?php echo $checkoutType; ?>';
-        const planId = '<?php echo $planId; ?>';
-        const total = <?php echo $total; ?>;
-        const userEmail = '<?php echo $userEmail; ?>';
+        // Variables nécessaires pour le JavaScript
+        window.userId = <?= $userId ? $userId : 'null' ?>;
+        window.checkoutType = '<?= htmlspecialchars($checkoutType) ?>';
+        window.planId = <?= $planId ? intval($planId) : 'null' ?>;
+        window.checkoutData = <?= json_encode($checkoutData) ?>;
+        
+        // Debug info
+        console.log('Checkout Data:', window.checkoutData);
+        console.log('Plan ID:', window.planId);
+        console.log('Checkout Type:', window.checkoutType);
     </script>
-    <script src="<?php echo STATIC_URL; ?>js/page-checkout.js"></script>
-    
+    <script src="<?= STATIC_URL ?>js/page-checkout.js"></script>
+
     <?php require_once COMPONENT_PATH . 'foot.php'; ?>

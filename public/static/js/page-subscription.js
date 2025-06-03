@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fonctions
     function init() {
+        console.log('Initialisation de la page subscription...');
+        
         // Charger les plans disponibles
         loadPlans();
         
@@ -59,11 +61,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fonction pour rediriger vers la page de checkout
     async function handleProceedToCheckout() {
-        if (!selectedPlanId) return;
+        if (!selectedPlanId) {
+            console.error('Aucun plan sélectionné');
+            alert('Veuillez sélectionner un plan');
+            return;
+        }
+        
+        console.log('Redirection vers checkout avec plan ID:', selectedPlanId);
         
         try {
+            // Vérifier que le plan existe bien
+            const selectedPlan = plans.find(p => p.id == selectedPlanId);
+            if (!selectedPlan) {
+                console.error('Plan introuvable:', selectedPlanId);
+                alert('Plan introuvable. Veuillez réessayer.');
+                return;
+            }
+            
+            console.log('Plan sélectionné:', selectedPlan);
+            
             // Rediriger vers la page de checkout avec l'ID du plan
-            window.location.href = `/checkout?plan_id=${selectedPlanId}&type=subscription`;
+            const checkoutUrl = `/checkout?plan_id=${selectedPlanId}&type=subscription`;
+            console.log('URL de redirection:', checkoutUrl);
+            window.location.href = checkoutUrl;
         } catch (error) {
             console.error('Erreur lors de la redirection vers le checkout:', error);
             alert('Une erreur est survenue. Veuillez réessayer plus tard.');
@@ -77,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function renderPlans() {
+        console.log('Rendu des plans:', plans);
+        
         if (!plansGrid) return;
         
         plansGrid.innerHTML = '';
@@ -96,6 +118,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         plans.forEach(plan => {
+            console.log('Rendu du plan:', plan);
+            
             const planCard = document.createElement('div');
             planCard.className = 'plan-card';
             if (popularPlan && plan.id === popularPlan.id) {
@@ -110,6 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     ? JSON.parse(plan.features) 
                     : plan.features || {};
                 
+                console.log('Features du plan:', featuresObj);
+                
                 // Ajouter les modèles disponibles
                 if (featuresObj && featuresObj.models && featuresObj.models.length > 0) {
                     features.push(`Accès aux modèles: ${featuresObj.models.join(', ')}`);
@@ -121,6 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (e) {
                 console.error('Erreur lors du parsing des fonctionnalités:', e);
+                console.log('Features brutes:', plan.features);
             }
             
             // Ajouter la limite de tokens
@@ -128,8 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 features.push(`${plan.token_limit.toLocaleString()} tokens par mois`);
             } else {
                 // Utiliser les valeurs de max_conversations et max_messages_per_day comme alternative
-                features.push(`${plan.max_conversations} conversations`);
-                features.push(`${plan.max_messages_per_day} messages par jour`);
+                if (plan.max_conversations) {
+                    features.push(`${plan.max_conversations} conversations`);
+                }
+                if (plan.max_messages_per_day) {
+                    features.push(`${plan.max_messages_per_day} messages par jour`);
+                }
             }
             
             // Générer la liste des fonctionnalités
@@ -139,9 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             planCard.innerHTML += `
                 <div class="plan-header">
-                    <h3 class="plan-name">${plan.name}</h3>
+                    <h3 class="plan-name">${plan.name || 'Plan sans nom'}</h3>
                     <p class="plan-price">
-                        <span class="currency">€</span>${parseFloat(plan.price).toFixed(2)}
+                        <span class="currency">€</span>${parseFloat(plan.price || 0).toFixed(2)}
                         <span class="period">/mois</span>
                     </p>
                 </div>
@@ -151,8 +182,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </ul>
                 </div>
                 <div class="plan-footer">
-                    <button class="button-primary subscribe-btn" data-plan-id="${plan.id}" data-plan-name="${plan.name}">
-                        ${parseFloat(plan.price) > 0 ? 'S\'abonner' : 'Commencer gratuitement'}
+                    <button class="button-primary subscribe-btn" data-plan-id="${plan.id}" data-plan-name="${plan.name || 'Plan sans nom'}">
+                        ${parseFloat(plan.price || 0) > 0 ? 'S\'abonner' : 'Commencer gratuitement'}
                     </button>
                 </div>
             `;
@@ -165,111 +196,79 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 const planId = this.getAttribute('data-plan-id');
                 const planName = this.getAttribute('data-plan-name');
+                console.log('Clic sur s\'abonner pour le plan:', planId, planName);
                 openSubscribeModal(planId, planName);
             });
         });
     }
     
-    
-    function renderCurrentSubscription() {
-        if (!currentSubscriptionContent || !currentSubscription) return;
-        
-        const plan = currentSubscription.plan || {};
-        const usage = currentSubscription.usage || {};
-        
-        // Calculer le pourcentage d'utilisation
-        const usagePercent = usage.tokens_used && usage.tokens_limit 
-            ? Math.min(100, Math.round((usage.tokens_used / usage.tokens_limit) * 100))
-            : 0;
+    // Fonction pour charger les plans
+    async function loadPlans() {
+        try {
+            if (!plansGrid) return;
 
-        // Formater les dates
-        const startDate = new Date(currentSubscription.started_at);
-        const formattedStartDate = startDate.toLocaleDateString('fr-FR');
-        
-        // Gérer la date d'expiration
-        let formattedEndDate;
-        if (!currentSubscription.expires_at || currentSubscription.expires_at === '0000-00-00 00:00:00') {
-            formattedEndDate = 'Illimité';
-        } else {
-            const endDate = new Date(currentSubscription.expires_at);
-            formattedEndDate = endDate.toLocaleDateString('fr-FR');
+            const response = await makeApiRequest('Subscription', 'getAvailablePlans', {});
+            console.log('Réponse API plans:', response);
+
+            if (!response || response.status !== 'success' || !Array.isArray(response.data)) {
+                throw new Error('Format de réponse invalide');
+            }
+
+            plans = response.data;
+            renderPlans();
+
+            // Masquer le spinner une fois le chargement terminé
+            if (plansLoading) {
+                plansLoading.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des plans:', error);
+            if (plansGrid) {
+                plansGrid.innerHTML = `
+                    <div class="error-message">
+                        Une erreur est survenue lors du chargement des plans. 
+                        <button onclick="loadPlans()">Réessayer</button>
+                    </div>
+                `;
+            }
         }
-        
-        currentSubscriptionContent.innerHTML = `
-            <div class="subscription-info">
-                <div class="subscription-details">
-                    <h3>Votre abonnement actuel</h3>
-                    <div class="subscription-meta">
-                        <div class="subscription-meta-item">
-                            <span class="meta-label">Plan</span>
-                            <span class="meta-value">${plan.name || 'Non spécifié'}</span>
-                        </div>
-                        <div class="subscription-meta-item">
-                            <span class="meta-label">Statut</span>
-                            <span class="meta-value">${currentSubscription.status === 'active' ? 'Actif' : 'Inactif'}</span>
-                        </div>
-                        <div class="subscription-meta-item">
-                            <span class="meta-label">Période</span>
-                            <span class="meta-value">${formattedStartDate} - ${formattedEndDate}</span>
-                        </div>
-                    </div>
-                    <div class="subscription-actions">
-                        <button id="change-plan-btn" class="button-secondary">Changer de plan</button>
-                        <button id="cancel-subscription-btn" class="button-danger">Annuler l'abonnement</button>
-                    </div>
-                </div>
-                <div class="usage-meter">
-                    <h4>Utilisation des tokens ce mois-ci</h4>
-                    <div class="meter-container">
-                        <div class="meter-fill" style="width: ${usagePercent}%"></div>
-                    </div>
-                    <div class="meter-labels">
-                        <span>${usage.tokens_used ? usage.tokens_used.toLocaleString() : 0} utilisés</span>
-                        <span>${usage.tokens_remaining ? usage.tokens_remaining.toLocaleString() : 0} restants</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Ajouter les écouteurs d'événements
-        document.getElementById('change-plan-btn').addEventListener('click', function() {
-            // Faire défiler jusqu'à la section des plans
-            document.querySelector('.plans-comparison').scrollIntoView({ behavior: 'smooth' });
-        });
-        
-        document.getElementById('cancel-subscription-btn').addEventListener('click', function() {
-            openCancelConfirmModal();
-        });
     }
-    
+
     function openSubscribeModal(planId, planName) {
+        console.log('Ouverture du modal pour le plan:', planId, planName);
+        
         if (!subscribeModal) return;
+        
+        // Vérifier que le plan existe
+        const selectedPlan = plans.find(p => p.id == planId);
+        if (!selectedPlan) {
+            console.error('Plan non trouvé:', planId);
+            alert('Ce plan n\'est plus disponible. Veuillez rafraîchir la page.');
+            return;
+        }
         
         // Stocker l'ID du plan sélectionné
         selectedPlanId = planId;
+        console.log('Plan sélectionné ID stocké:', selectedPlanId);
+
+        if (planNameSpan) {
+            planNameSpan.textContent = selectedPlan.name;
+        }
         
-        // Mettre à jour les informations du plan
-        planNameSpan.textContent = planName;
-        
-        // Trouver le plan sélectionné
-        const selectedPlan = plans.find(p => p.id == planId);
-        if (!selectedPlan) return;
-        
-        // Préparer l'affichage de la limite de tokens
-        const tokenLimit = selectedPlan.token_limit 
-            ? `${selectedPlan.token_limit.toLocaleString()} tokens par mois`
-            : `${selectedPlan.max_messages_per_day || 0} messages par jour`;
-        
-        // Afficher les détails du plan
-        planDetailsDiv.innerHTML = `
-            <h4>Détails du plan</h4>
-            <div class="plan-summary">
-                <span class="plan-name">${selectedPlan.name}</span>
-                <span class="plan-price">${parseFloat(selectedPlan.price).toFixed(2)} €/mois</span>
-            </div>
-            <p class="plan-description">${selectedPlan.description || 'Aucune description disponible'}</p>
-            <p>Limite d'utilisation: ${tokenLimit}</p>
-        `;
+        if (planDetailsDiv) {
+            // Préparer l'affichage des caractéristiques du plan
+            const tokenLimit = selectedPlan.token_limit 
+                ? `${selectedPlan.token_limit.toLocaleString()} tokens par mois`
+                : `${selectedPlan.max_messages_per_day || 0} messages par jour`;
+
+            planDetailsDiv.innerHTML = `
+                <div class="plan-summary">
+                    <p class="plan-description">${selectedPlan.description || 'Aucune description disponible'}</p>
+                    <p class="plan-price">${selectedPlan.price} €/mois</p>
+                    <p class="plan-limit">${tokenLimit}</p>
+                </div>
+            `;
+        }
         
         // Afficher le modal
         subscribeModal.classList.add('active');
@@ -341,20 +340,30 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         // Ajouter les écouteurs d'événements
-        document.getElementById('change-plan-btn').addEventListener('click', function() {
-            // Faire défiler jusqu'à la section des plans
-            document.querySelector('.plans-comparison').scrollIntoView({ behavior: 'smooth' });
-        });
+        const changePlanBtn = document.getElementById('change-plan-btn');
+        const cancelSubscriptionBtn = document.getElementById('cancel-subscription-btn');
         
-        document.getElementById('cancel-subscription-btn').addEventListener('click', function() {
-            openCancelConfirmModal();
-        });
+        if (changePlanBtn) {
+            changePlanBtn.addEventListener('click', function() {
+                // Faire défiler jusqu'à la section des plans
+                const plansSection = document.querySelector('.plans-comparison');
+                if (plansSection) {
+                    plansSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+        
+        if (cancelSubscriptionBtn) {
+            cancelSubscriptionBtn.addEventListener('click', function() {
+                openCancelConfirmModal();
+            });
+        }
     }
     
     function handleCancelSubscription() {
         const context = {
             service: 'Subscription',
-            action: 'cancelSubscription', // Changé de 'cancel' à 'cancelSubscription'
+            action: 'cancelSubscription',
             data: {
                 subscription_id: currentSubscription.id
             }
@@ -374,32 +383,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erreur:', error);
                 alert('Une erreur est survenue lors de l\'annulation de l\'abonnement');
             });
-    }    function loadCurrentSubscription() {
+    }
+    
+    function loadCurrentSubscription() {
         if (!currentSubscriptionContent) return;
+        
         if (!currentUserId) {
             currentSubscriptionContent.innerHTML = `
                 <div class="no-subscription">
                     <p>Vous devez être connecté pour voir votre abonnement. <a href="/user/login.php">Se connecter</a></p>
                 </div>
             `;
-            currentSubscriptionLoading.style.display = 'none';
+            if (currentSubscriptionLoading) {
+                currentSubscriptionLoading.style.display = 'none';
+            }
             currentSubscriptionContent.style.display = 'block';
             return;
         }
 
-        currentSubscriptionLoading.style.display = 'flex';
+        if (currentSubscriptionLoading) {
+            currentSubscriptionLoading.style.display = 'flex';
+        }
         currentSubscriptionContent.style.display = 'none';
 
         const context = {
             service: 'Subscription',
-            action: 'getUserSubscription',  // Changé de 'getCurrent' à 'getUserSubscription'
+            action: 'getUserSubscription',
             data: {
                 user_id: currentUserId
             }
         };
 
         postData(context)
-            .then(data => {                if (data.status === 'success') {
+            .then(data => {
+                if (data.status === 'success') {
                     if (data.data) {
                         currentSubscription = data.data;
                         renderCurrentSubscription();
@@ -420,7 +437,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentSubscriptionContent.innerHTML = '<p class="error-message">Erreur lors du chargement de votre abonnement. Veuillez réessayer.</p>';
             })
             .finally(() => {
-                currentSubscriptionLoading.style.display = 'none';
+                if (currentSubscriptionLoading) {
+                    currentSubscriptionLoading.style.display = 'none';
+                }
                 currentSubscriptionContent.style.display = 'block';
             });
     }
@@ -428,7 +447,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadPlans() {
         if (!plansGrid) return;
         
-        plansLoading.style.display = 'flex';
+        if (plansLoading) {
+            plansLoading.style.display = 'flex';
+        }
 
         const context = {
             service: 'Subscription',
@@ -449,7 +470,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 plansGrid.innerHTML = '<p class="error-message">Erreur lors du chargement des plans. Veuillez réessayer.</p>';
             })
             .finally(() => {
-                plansLoading.style.display = 'none';
+                if (plansLoading) {
+                    plansLoading.style.display = 'none';
+                }
             });
     }
 });

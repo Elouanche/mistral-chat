@@ -1,5 +1,19 @@
 <?php
 require_once SHARED_PATH . 'session.php';
+
+// Gérer les messages d'erreur
+$error = $_GET['error'] ?? null;
+$errorMessage = '';
+$debugInfo = $_GET['debug'] ?? null;
+
+if ($error === 'invalid_plan') {
+    $errorMessage = 'Le plan sélectionné n\'est pas valide. Veuillez choisir un autre plan.';
+    if ($debugInfo) {
+        $errorMessage .= ' (Debug: ' . htmlspecialchars($debugInfo) . ')';
+    }
+} elseif ($error === 'missing_plan') {
+    $errorMessage = 'Aucun plan sélectionné. Veuillez choisir un plan.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -13,6 +27,12 @@ require_once SHARED_PATH . 'session.php';
     <?php require_once COMPONENT_PATH . 'header.php'; ?>
 
     <main class="subscription-container">
+        <?php if ($errorMessage): ?>
+        <div class="alert alert-error">
+            <?= htmlspecialchars($errorMessage) ?>
+        </div>
+        <?php endif; ?>
+
         <section class="subscription-header">
             <h1>Abonnements Mistral Chat</h1>
             <p>Choisissez le plan qui correspond à vos besoins et accédez à des fonctionnalités avancées.</p>
@@ -112,6 +132,9 @@ require_once SHARED_PATH . 'session.php';
         <?php else: ?>
         const currentUserId = null;
         <?php endif; ?>
+        
+        // Debug info
+        console.log('Current User ID:', currentUserId);
     </script>
     <script src="<?php echo STATIC_URL; ?>js/page-subscription.js"></script>
     

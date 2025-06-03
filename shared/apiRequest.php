@@ -19,7 +19,9 @@ function makeApiRequest($service, $action, $additionalData = []) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-
+    // Désactiver la vérification SSL pour les environnements de développement
+    // Note: Ne pas utiliser ceci en production, car cela désactive la sécurité SSL
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     // Exécuter la requête
     $response = curl_exec($ch);
     

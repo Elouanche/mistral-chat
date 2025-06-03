@@ -3,6 +3,7 @@
 use Stripe\ApiOperations\Update;
 require_once CRUD_PATH . 'PaymentsCRUD.php';
 require_once CRUD_PATH . 'OrdersCRUD.php';
+require_once CRUD_PATH . 'UsersCRUD.php';
 require_once BASE_PATH . 'vendor/autoload.php';
 
 // Énumération des statuts de paiement (PHP 8.1+)
@@ -47,9 +48,10 @@ class PaymentService {
     /** @var string $stripePublicKey Clé publique Stripe */
     private $stripePublicKey;
     /** @var PaymentsCRUD $paymentsCRUD Instance du CRUD paiements */
-    private $paymentsCRUD;
-    /** @var OrdersCRUD $ordersCRUD Instance du CRUD paiements */
+    private $paymentsCRUD;    /** @var OrdersCRUD $ordersCRUD Instance du CRUD commandes */
     private $ordersCRUD;
+    /** @var UsersCRUD $usersCRUD Instance du CRUD utilisateurs */
+    private $usersCRUD;
     
     /** @var mysqli $mysqli Instance de connexion mysqli */
     private $mysqli;
@@ -62,10 +64,10 @@ class PaymentService {
      * 
      * @param mysqli $mysqli Instance de connexion mysqli
      */
-    public function __construct($mysqli) {
-        $this->mysqli = $mysqli;
+    public function __construct($mysqli) {        $this->mysqli = $mysqli;
         $this->paymentsCRUD = new PaymentsCRUD($mysqli);
         $this->ordersCRUD = new OrdersCRUD($mysqli);
+        $this->usersCRUD = new UsersCRUD($mysqli);
         
         if (!defined('SECURE_ACCESS')) {
             define('SECURE_ACCESS', true);
@@ -162,66 +164,129 @@ class PaymentService {
     /**
      * Crée une session Stripe Checkout pour le paiement de la commande
      * 
-     * @param array $data - order_id, user_id, et line_items
+     * @param array $data - Données de la commande (user_id, checkout_type, plan_id, price_data pour abonnement ou line_items pour panier)
      * @return array - Détails de la session (url, id)
      */
     public function createCheckoutSession($data) {
-        if (!isset($data['order_id']) || !isset($data['user_id']) || !isset($data['line_items'])) {
-            logError("Données manquantes pour la création de session checkout", $data);
-            return [
-                'status' => 'error',
-                'message' => 'Données manquantes pour créer une session Stripe Checkout'
-            ];
+        logInfo("Creating checkout session", ['data' => $data]);
+        
+        // Basic data validation
+        if (!isset($data['user_id'])) {
+            return ['status' => 'error', 'message' => 'User ID is required'];
         }
-            
+
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+        $baseUrl = $protocol . "://" . $_SERVER['HTTP_HOST'];
+        
+        try {
+            // Check if user exists
+            $user = $this->usersCRUD->get(['*'], ['id' => $data['user_id']])[0] ?? null;
+            if (!$user) {
+                return ['status' => 'error', 'message' => 'User not found'];
+            }
 
-        // Créer la session de paiement
-        $session = $this->stripe->checkout->sessions->create([
-            'payment_method_types' => ['card'],
-            'mode' => 'payment',            'success_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/success?type=' . ($data['type'] ?? 'order') . '&order_id=' . $data['order_id'] . (isset($data['plan_id']) ? '&plan_id=' . $data['plan_id'] : ''),
-            'cancel_url' => $protocol . '://' . $_SERVER['HTTP_HOST'] . '/cancel?type=' . ($data['type'] ?? 'order') . '&order_id=' . $data['order_id'],
-            'line_items' => $data['line_items'],            'metadata' => [
-                'order_id' => $data['order_id'],
+            $checkout_type = $data['checkout_type'] ?? 'payment';
+            $sessionData = [];
+
+            if ($checkout_type === 'subscription' && isset($data['plan_id'])) {
+                // Create Stripe Product first
+                $product = $this->stripe->products->create([
+                    'name' => $data['price_data']['name']
+                ]);
+
+                if (isset($data['price_data']['description'])) {
+                    $product = $this->stripe->products->update($product->id, [
+                        'description' => $data['price_data']['description']
+                    ]);
+                }
+
+                // Create price for the product
+                $price = $this->stripe->prices->create([
+                    'unit_amount' => $data['price_data']['unit_amount'],
+                    'currency' => $data['price_data']['currency'],
+                    'recurring' => ['interval' => 'month'],
+                    'product' => $product->id
+                ]);
+
+                $sessionData = [
+                    'mode' => 'subscription',
+                    'line_items' => [[
+                        'price' => $price->id,
+                        'quantity' => 1,
+                    ]],
+                ];
+            } else {
+                // Single payment configuration
+                $sessionData = [
+                    'mode' => 'payment',
+                    'line_items' => [[
+                        'price_data' => [
+                            'currency' => $data['price_data']['currency'],
+                            'unit_amount' => $data['price_data']['unit_amount'],
+                            'product_data' => [
+                                'name' => $data['price_data']['name'],
+                                'description' => $data['price_data']['description'] ?? null,
+                            ],
+                        ],
+                        'quantity' => 1,
+                    ]],
+                ];
+            }
+
+            // Common session configuration
+            $sessionData = array_merge($sessionData, [
+                'customer_email' => $user['email'],
+                'success_url' => $baseUrl . '/success?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => $baseUrl . '/cancel?session_id={CHECKOUT_SESSION_ID}',
+            ]);
+
+            // Create Stripe session
+            $session = $this->stripe->checkout->sessions->create($sessionData);
+
+            // Prepare payment data for database
+            $paymentData = [
                 'user_id' => $data['user_id'],
-                'type' => $data['type'] ?? 'order',
-                'plan_id' => $data['plan_id'] ?? null
-            ]
-        ]);
-
-        if (!$session) {
-            logError("Échec de création de la session checkout", $data);
-            return [
-                'status' => 'error',
-                'message' => "Échec de création de la session checkout"
+                'amount' => $data['price_data']['unit_amount'] / 100,
+                'payment_method' => 'stripe',
+                'status' => PaymentStatus::PENDING->value,                
+                'stripe_payment_id' => $session->id,
+                'created_at' => date('Y-m-d H:i:s'),
+                'payment_type' => $checkout_type
             ];
-        }
-    
-        // Création de l'enregistrement dans la base de données
-        $paymentData = [
-            'order_id' => $data['order_id'],
-            'user_id' => $data['user_id'],
-            'payment_method' => self::PAYMENT_TYPE_CHECKOUT,
-            'amount' => $this->calculateTotalAmount($data),
-            'status' => PaymentStatus::PENDING->value,
-            'stripe_payment_id' => $session->id,
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-        
-        $paymentId = $this->paymentsCRUD->insert($paymentData);
-        
-        if (!$paymentId) {
-            logError("Échec d'enregistrement du paiement en base de données", $paymentData);
-            return [
-                'status' => 'error',
-                'message' => "Échec d'enregistrement du paiement en base de données"
-            ];
-        }
 
-        return [
-            'status' => 'success',
-            'redirect' => $session->url,
-        ];
+            // Add metadata for subscriptions
+            if ($checkout_type === 'subscription') {
+                $paymentData['metadata'] = json_encode([
+                    'plan_id' => $data['plan_id'],
+                    'type' => 'subscription'
+                ]);
+            }
+
+            // Create payment record
+            $paymentId = $this->paymentsCRUD->insert($paymentData);
+
+            if (!$paymentId) {
+                throw new \Exception("Failed to create payment record");
+            }
+
+            return [
+                'status' => 'success',
+                'redirect' => $session->url,
+            ];
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            logError("Stripe error while creating session", [
+                'code' => $e->getCode(),
+                'message' => $e->getMessage()
+            ]);
+            return ['status' => 'error', 'message' => 'Error creating payment session'];
+        } catch (\Exception $e) {
+            logError("Error while creating session", [
+                'code' => $e->getCode(),
+                'message' => $e->getMessage()
+            ]);
+            return ['status' => 'error', 'message' => 'Error creating payment session'];
+        }
     }
     
     /**
